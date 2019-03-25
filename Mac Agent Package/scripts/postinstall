@@ -1,0 +1,38 @@
+#!/bin/bash
+
+xattr -rc /Applications/Resilio\ Connect\ Agent.app
+
+launchd_plist=/Users/$USER/Library/LaunchAgents/com.resilio.agent.plist
+storage=/Users/$USER/Library/Application\ Support/Resilio\ Connect\ Agent
+
+tee $launchd_plist << EOL
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "–//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+<key>Label</key>
+<string>com.resilio.agent</string>
+<key>ProgramArguments</key>
+<array>
+<string>/Applications/Resilio Connect Agent.app/Contents/MacOS/Resilio Connect Agent</string>
+<string>--config</string>
+<string>/Users/$USER/Library/Application Support/Resilio Connect Agent/sync.conf</string>
+</array>
+<key>RunAtLoad</key>
+<true/>
+<key>KeepAlive</key>
+<dict>
+<key>SuccessfulExit</key>
+<false/>
+</dict>
+<key>Umask</key>
+<integer>2</integer>
+</dict>
+</plist>
+EOL
+
+chown -R $USER:staff $launchd_plist
+
+sudo -u $USER launchctl load -w $launchd_plist
+
+#sudo -u $USER /Applications/Resilio\ Connect\ Agent.app/Contents/MacOS/Resilio\ Connect\ Agent &

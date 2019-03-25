@@ -1,0 +1,20 @@
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File verify_upgrade.ps1 > verify.log 2>&1
+
+set ERR=%ERRORLEVEL%
+
+if %ERR%==1 (
+echo No need to upgrade, same version detected
+type verify.log
+exit /b 0
+)
+
+if %ERR% GEQ 2 (
+type verify.log
+exit /b %ERR%
+)
+
+echo %APPDATA%\Resilio Connect Agent Service>oldstorage.path
+schtasks /create /TN ResilioUpgrade /XML ResilioUpgrade.xml /F
+schtasks /run /tn ResilioUpgrade
+ 

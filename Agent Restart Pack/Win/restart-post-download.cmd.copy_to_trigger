@@ -1,0 +1,2 @@
+schtasks /create /TN ResilioRestart /XML ResilioRestart.xml /F
+schtasks /run /tn ResilioRestart

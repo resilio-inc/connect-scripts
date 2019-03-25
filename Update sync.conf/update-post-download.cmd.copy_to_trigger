@@ -1,0 +1,1 @@
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File update-syncconf.ps1 <place_your_parameters_here>
