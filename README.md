@@ -15,6 +15,9 @@ This folder contains scripts and files to create OS X package with sync.conf pre
 ## Win Agent MSI
 This folder contains scripts and instructions to package sync.conf insider Connect Agent MSI installer to automatically connect to Management Console after installation.
 
+## Move Files Pack
+This folder contains solution to clean up files on source peer once they are confirmed to be delivered to destination
+
 ## start-process-under-logged-on-user.ps1 ![alt text](https://i.imgur.com/F6NAQyb.png "Script supports standard Get-Help cmdlet")
 This script allows to start process (`-AppPath`) with arguments (`-AppCmd`) under currently logged on user and show UI for him. Also, you can specify working directory (`-WorkDir`) and wait till process will be ended (`-Wait`).
  
