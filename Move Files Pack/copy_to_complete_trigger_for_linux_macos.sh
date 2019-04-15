@@ -1,7 +1,7 @@
-#!/bin/bash
 
 if [ -f  ./.sync/sourcemarker.txt ]; then
     echo "Source peer, deleting files"
+	rm ./.sync/sourcemarker.txt
 	rm -rf *
 else
 	echo "Destination peer"
