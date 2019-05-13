@@ -115,6 +115,7 @@ def process_tasks(config, args):
 
 def restart_agent():
     logging.info('Attempting to restart Resilio Connect Agent in 2 minutes')
+    initialize_cron()
     stop_agent()
     time.sleep(5)
     start_agent()
@@ -148,6 +149,11 @@ def start_agent_daemon():
     logging.error(Colors.red + 'Can\'t find launchd daemon of Resilio Connect Agent: {}'.format(launch_daemon_path)
                   + Colors.end)
     sys.exit(1)
+
+
+def initialize_cron():
+    cmd = "crontab -l | crontab -"
+    subprocess.Popen(cmd, shell=True)
 
 
 def stop_agent():
