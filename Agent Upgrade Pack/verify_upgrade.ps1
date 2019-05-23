@@ -21,9 +21,9 @@ $errcode = 0
 try
 {
 	Add-Type -Assembly System.Windows.Forms
-	######### Check 0 - files
+	######### Check 0 - files and paths
 	$filecheckfailure = $false
-	Write-Output "Checking if all necessary files are present..."
+	Write-Output "Checking if all necessary files are present and paths are correct..."
 	if (!(Test-Path ".\Resilio-Connect-Agent.exe" -PathType Leaf))
 	{
 		if (!$NoX86exeCheck)
@@ -59,9 +59,16 @@ try
 		$errcode = 5
 	}
 	
+	if ((Get-Location).Path -ne 'C:\ResilioUpgrade')
+	{
+		Write-Output "Upgrade folder is different from `"C:\ResilioUpgrade`""
+		$filecheckfailure = $true
+		$errcode = 6
+	}
+	
 	if ($filecheckfailure)
 	{
-		throw "Some files are missing, upgrade impossile"
+		throw "Some files are missing or paths are invalid, upgrade impossile"
 	}
 	Write-Output "[OK]"
 	
