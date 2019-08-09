@@ -1,5 +1,6 @@
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File verify_upgrade.ps1 > verify.log 2>&1
+rem powershell.exe -NoProfile -ExecutionPolicy Bypass -File verify_upgrade.ps1 -NoX86exeCheck > verify.log 2>&1
 
 set ERR=%ERRORLEVEL%
 
