@@ -1,5 +1,11 @@
 [CmdletBinding()]
-Param ()
+param
+(
+	[switch]$NoX86exeCheck,
+	[switch]$Verify,
+	[switch]$CreateUpgradeTask,
+	[switch]$RunUpgradeTask
+)
 
 <#
 .SYNOPSIS
@@ -7,12 +13,12 @@ The script is intended to upgrade current installation of Resilio Connect Agent 
 
 .DESCRIPTION
 If done via Connect Job, upgrade script should advised to be started by TaskScheduler service to 
-completely detach from launching agent. It's recommended to start script from "C:\ResilioUpgrade" 
-folder. Script expects next files to be present in the script folder: 
+completely detach from launching agent. The script can start from any folder. Script expects next 
+files to be present in the script folder: 
   oldstorage.path" - should contain path to current storage folder. Used when migrating 2.4 agent
                      to 2.5 agent
-  Resilio-Connect-Agent.exe - x86 version of executable. Used to replace original one
-  Resilio-Connect-Agent_x64.exe - x64 version of executable
+  Resilio-Connect-Agent.exe - x86 version of executable. (only for x86 Win upgrades)
+  Resilio-Connect-Agent_x64.exe - x64 version of executable (only for x64 Win upgrades)
 
 Proper version is selected automatically.
 
@@ -25,7 +31,31 @@ script will take care to transfer old storage folder to it's new position
 is taken from 
 "C:\Windows\System32\config\systemprofile\AppData\Roaming\Resilio Connect Agent Service\"
 
+Run without parameters to actually perform an upgrade
+
+.PARAMETER Verify
+Runs the script in verification mode. Only checks if all the pre-requisites for the upgrade are
+met.
+
+.PARAMETER NoX86exeCheck
+Use with -Verify only. Skips verification of x86 version of binary and do not count it as 
+terminating error.
+
+.PARAMETER CreateUpgradeTask
+Forces the script to create upgrade task in Task Scheduler service. Call it before running with
+-RunUpgradeTask. Upgrade via Task Scheduler service is mandatory to detach from Agent's
+command prompt.
+
+.PARAMETER RunUpgradeTask
+Runs Windows Task Scheduler task named "ResilioUpgrade" to actually perform an upgrade. Upgrade 
+via Task Scheduler service is mandatory to detach from Agent's command prompt.
+
+.LINK
+https://github.com/resilio-inc/connect-scripts/tree/master/Agent%20Upgrade%20Pack
+
 .OUTPUTS
+Script populates verify.log in the folders it started from with all the necessary checks. If any
+of checks fail, it won't perform the upgrade.
 Script drops the upgrade.log to the folder it started from
 #>
 
@@ -100,7 +130,7 @@ public class ExtractData
 }
 "@
 
-$xmlpart1 = '<?xml version="1.0" encoding="UTF-16"?>
+$explorerxmlpart1 = '<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
 <RegistrationInfo>
 <Date>2019-08-08T05:20:27.7653597</Date>
@@ -111,7 +141,7 @@ $xmlpart1 = '<?xml version="1.0" encoding="UTF-16"?>
 <Principal id="Author">
 <UserId>'
 
-$xmlpart2 = '</UserId>
+$explorerxmlpart2 = '</UserId>
 <LogonType>InteractiveToken</LogonType>
 <RunLevel>LeastPrivilege</RunLevel>
 </Principal>
@@ -142,10 +172,195 @@ $xmlpart2 = '</UserId>
 </Actions>
 </Task>'
 
-# Define own paths and names
-$ownscriptpathname = (Resolve-Path $MyInvocation.InvocationName).Path
+$upgradexmlpart1 = '<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Date>2018-11-02T23:15:32</Date>
+    <Author>ResilioInc</Author>
+    <URI>\ResilioUpgrade</URI>
+  </RegistrationInfo>
+  <Triggers>
+    <TimeTrigger>
+      <StartBoundary>1910-01-01T00:00:00</StartBoundary>
+      <Enabled>true</Enabled>
+    </TimeTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <UserId>S-1-5-18</UserId>
+      <RunLevel>LeastPrivilege</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>true</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>false</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <IdleSettings>
+      <Duration>PT10M</Duration>
+      <WaitTimeout>PT1H</WaitTimeout>
+      <StopOnIdleEnd>true</StopOnIdleEnd>
+      <RestartOnIdle>false</RestartOnIdle>
+    </IdleSettings>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <WakeToRun>false</WakeToRun>
+    <ExecutionTimeLimit>PT72H</ExecutionTimeLimit>
+    <Priority>7</Priority>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>powershell.exe  </Command>
+      <Arguments>-NoProfile -ExecutionPolicy Bypass -File '
+$upgradexmlpart2 = '</Arguments>
+    </Exec>
+  </Actions>
+</Task>
+'
+# --------------------------------------------------------------------------------------------------------------------------------
+
+function Verify-UpgradePossible
+{
+	$errcode = 0
+	$VerbosePreference = 'Continue'
+	try
+	{
+		Add-Type -Assembly System.Windows.Forms
+		######### Check 0 - files and paths
+		$filecheckfailure = $false
+		Write-Verbose "Checking upgradeables"
+		if (!(Test-Path ".\Resilio-Connect-Agent.exe" -PathType Leaf))
+		{
+			if (!$NoX86exeCheck)
+			{
+				Write-Verbose "Resilio-Connect-Agent.exe file is missing"
+				$filecheckfailure = $true
+				$errcode = 2
+			}
+			else
+			{
+				Write-Verbose "Bypassing x86 binary check as requested"
+			}
+		}
+		
+		if (!(Test-Path "Resilio-Connect-Agent_x64.exe" -PathType Leaf))
+		{
+			Write-Verbose "Resilio-Connect-Agent_x64.exe file is missing"
+			$filecheckfailure = $true
+			$errcode = 3
+		}
+				
+		if ($filecheckfailure)
+		{
+			throw "Some files are missing or paths are invalid, upgrade impossile"
+		}
+		Write-Verbose "[OK]"
+		
+		######### Check 1 - elevated privileges
+		Write-Verbose "Checking for elevated privileges..."
+		$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+		if (!$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
+		{
+			$errcode = 12
+			throw "Script is not running with elevated privileges, upgrade impossible"
+		}
+		Write-Verbose "[OK]"
+		
+		######### Check 2 - if running on battery
+		Write-Verbose "Checking computer is AC powered..."
+		
+		if ([System.Windows.Forms.SystemInformation]::PowerStatus.PowerLineStatus -ne 'Online')
+		{
+			$errcode = 13
+			throw "Computer runs on battery power, upgrade is too risky now"
+		}
+		Write-Verbose "[OK]"
+		
+		######### Check 3 - if task scheduler works
+		Write-Verbose "Checking Task Scheduler service is running..."
+		if ((Get-Service -Name "schedule").Status -ne 'Running')
+		{
+			$errcode = 14
+			throw "Task Scheduler service is not running, upgrade is not possible"
+		}
+		Write-Verbose "[OK]"
+		
+		######### Check 4 - checking the agent version
+		Write-Verbose "Checking Agent versions..."
+		$processname = "Resilio Connect Agent.exe"
+		$agentupgradeablex86 = "Resilio-Connect-Agent.exe"
+		$agentupgradeablex64 = "Resilio-Connect-Agent_x64.exe"
+		if ([IntPtr]::size -eq 8) { $agentupgradeble = $agentupgradeablex64 }
+		else { $agentupgradeble = $agentupgradeablex86 }
+		$tmp = Get-ItemProperty -path 'HKLM:\SOFTWARE\Resilio, Inc.\Resilio Connect Agent\' -ErrorAction SilentlyContinue
+		if (!$tmp)
+		{
+			$errcode = 16
+			throw "Agent installation not found on target system"
+		}
+		$processpath = $tmp.InstallDir
+		$fullexepath = Join-Path -Path $processpath -ChildPath $processname
+		$fullupgradeablepath = Join-Path -Path $ownscriptpath -ChildPath $agentupgradeble
+		[System.Version]$oldversion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("$fullexepath").FileVersion
+		[System.Version]$newversion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("$fullupgradeablepath").FileVersion
+		if ($oldversion -gt $newversion)
+		{
+			$errcode = 15
+			throw "Attempted to downgrade from $oldversion to $newversion, downgrade is not supported"
+		}
+		if ($oldversion -eq $newversion)
+		{
+			Write-Verbose "Same version detected, no point in launching upgrade"
+			$errcode = 1
+		}
+		# If no errors found, we can report that the upgrade will happen
+		if ($errcode -eq 0)
+		{
+			Write-Verbose "Upgrading from $oldversion to $newversion"
+			Write-Verbose "[OK]"
+		}
+	}
+	catch
+	{
+		Write-Verbose "ERROR: $_"
+	}
+	return $errcode
+}
+
+# --------------------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------------------
+# Script starts here
+$ownscriptpathname = $MyInvocation.MyCommand.Definition
 $ownscriptpath = Split-Path -Path $ownscriptpathname
 $ownscriptname = Split-Path $ownscriptpathname -Leaf
+
+# Here we need to verify if the installation can be done
+if ($Verify)
+{
+	$result = Verify-UpgradePossible
+	exit $result
+}
+
+# Just register self as a task scheduler
+if ($CreateUpgradeTask)
+{
+	$AgentUpgradeXML = "$upgradexmlpart1`"$ownscriptpathname`" -Verbose$upgradexmlpart2"
+	Set-Content -Path "ResilioUpgrade.xml" -Value $AgentUpgradeXML
+	Start-Process -FilePath "schtasks" -ArgumentList "/create /TN ResilioUpgrade /XML ResilioUpgrade.xml /F"
+	exit 0
+}
+
+# Start previously registered task from task scheduler
+if ($RunUpgradeTask)
+{
+	Start-Process -FilePath "schtasks" -ArgumentList "/run /tn ResilioUpgrade"
+	exit 0	
+}
 
 # Start logging
 Start-Transcript -Path "$ownscriptpath\upgrade.log" -Append
@@ -243,8 +458,8 @@ try
 		# Rename old extension DLLs
 		Remove-Item -Path "$fullextx86path.old" -Force -ErrorAction SilentlyContinue
 		Remove-Item -Path "$fullextx64path.old" -Force -ErrorAction SilentlyContinue
-		Move-Item -Path "$fullextx86path" -Destination "$fullextx86path.old" -Force
-		Move-Item -Path "$fullextx64path" -Destination "$fullextx64path.old" -Force
+		Move-Item -Path "$fullextx86path" -Destination "$fullextx86path.old" -Force -ErrorAction SilentlyContinue
+		Move-Item -Path "$fullextx64path" -Destination "$fullextx64path.old" -Force -ErrorAction SilentlyContinue
 		Write-Verbose "Old extension DLLs were renamed"
 		
 		# Extract new extension DLLs in place of old ones
@@ -266,7 +481,7 @@ try
 			if (!(Get-Process -Name explorer))
 			{
 				Write-Verbose "Explorer did not restart automatically, restarting via Task Scheduler"
-				$ExplorerXML = "$xmlpart1$currentloggeduser$xmlpart2"
+				$ExplorerXML = "$explorerxmlpart1$currentloggeduser$explorerxmlpart2"
 				Set-Content -Path "StartExplorer.xml" -Value $ExplorerXML
 				Start-Process -FilePath "schtasks" -ArgumentList "/create /TN StartExplorer /XML StartExplorer.xml /F"
 				Start-Sleep -Seconds 3
@@ -285,7 +500,7 @@ try
 }
 catch
 {
-	Write-Error "Unexpected error occuerd: $_"
+	Write-Output "Unexpected error occuerd: $_"
 }
 finally
 {
