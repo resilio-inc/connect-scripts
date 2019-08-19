@@ -20,7 +20,7 @@ The script is actually doing an upgrade, which includes:
 * Supplying proper permissions for the new storage folder
 * Starting the service
 
-During verification stem the script verifies if all the pre-requisites are met to perform an upgrade. In case something is missing, script will report an error and exit with error code. In case you cannot get upgrade logs, you can rely on codes:
+During verification step the script verifies if all the pre-requisites are met to perform an upgrade. In case something is missing, script will report an error and exit with error code. In case you cannot get upgrade logs, you can rely on codes:
 
 | Error code    | Error meaning                                                                               |
 | ------------- | ------------------------------------------------------------------------------------------- |
@@ -29,14 +29,13 @@ During verification stem the script verifies if all the pre-requisites are met t
 | 2             | upgradable x86 binary missing                                                               |
 | 3             | upgradable x64 binary missing                                                               |
 | 4             | powershell script agent_upgrade.ps1 missing                                                 |
-| 5             | Task Scheduler configuration file resilioupgrade.xml missing                                |
-| 6             | Upgrade folder is different from "C:\ResilioUpgrade"                                        |
 | 12            | Agent runs without elevated privileges, upgrade not possible                                |
 | 13            | Laptop is runninng on battery mode, upgrade impossible. Once laptop powered, start job again|
 | 14            | task scheduler not running, upgrade not possible                                            |
 | 15            | installed version is newer than one supplied, upgrade script stops with no changes          |
 | 16            | Agent installation not found (no proper registry key pointing to executable location)       |
 
+If you don't see your error code in the table above, update your Agent Upgrade Pack.
 If error code is higher than zero, log of the verification is dumped to "verify.log" file next to the script. If you do not plan to deply any x86 machines upgrade, specify `-NoX86exeCheck` switch.
 
 During the upgrade step the script drops upgrade.log in same directory it resides.
