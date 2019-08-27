@@ -2,6 +2,7 @@
 param
 (
 	[switch]$NoX86exeCheck,
+	[switch]$NoExtensionUpgrade,
 	[switch]$Verify,
 	[switch]$CreateUpgradeTask,
 	[switch]$RunUpgradeTask
@@ -49,6 +50,9 @@ command prompt.
 .PARAMETER RunUpgradeTask
 Runs Windows Task Scheduler task named "ResilioUpgrade" to actually perform an upgrade. Upgrade 
 via Task Scheduler service is mandatory to detach from Agent's command prompt.
+
+.PARAMETER NoExtensionUpgrade
+Prevents script from upgrading Explorer extensions (used for selective sync)
 
 .LINK
 https://github.com/resilio-inc/connect-scripts/tree/master/Agent%20Upgrade%20Pack
@@ -453,8 +457,12 @@ try
 	}
 	
 	# Upgrade Explorer extension DLLs if they are installed
-	if ([System.IO.File]::Exists("$fullextx86path"))
+	if ([System.IO.File]::Exists("$fullextx86path") -and !$NoExtensionUpgrade)
 	{
+		# Unregister old extensions
+		Write-Verbose "Unregistering extension"
+		Start-Process -FilePath "regsvr32" -ArgumentList "/u /s `"$fullextx86path`""
+		Start-Process -FilePath "regsvr32" -ArgumentList "/u /s `"$fullextx64path`""
 		# Rename old extension DLLs
 		Remove-Item -Path "$fullextx86path.old" -Force -ErrorAction SilentlyContinue
 		Remove-Item -Path "$fullextx64path.old" -Force -ErrorAction SilentlyContinue
@@ -470,6 +478,10 @@ try
 		Set-Content -Path $fullextx86path -Value $dllx86 -Encoding Byte
 		Set-Content -Path $fullextx64path -Value $dllx64 -Encoding Byte
 		Write-Verbose "New extension DLLs are in place"
+		# Register new extensions
+		Write-Verbose "Registering updated extensions"
+		Start-Process -FilePath "regsvr32" -ArgumentList "/i /s `"$fullextx86path`""
+		Start-Process -FilePath "regsvr32" -ArgumentList "/i /s `"$fullextx64path`""
 		
 		# Restart explorer so new DLLs take effect
 		$currentloggeduser = (Get-Process -Name explorer -IncludeUserName -ErrorAction SilentlyContinue).UserName
@@ -478,6 +490,7 @@ try
 			Write-Verbose "Found user `"$currentloggeduser`" logged in, attempting to restart explorer.exe"
 			Stop-Process -Name explorer -Force
 			Start-Sleep 5
+			
 			if (!(Get-Process -Name explorer))
 			{
 				Write-Verbose "Explorer did not restart automatically, restarting via Task Scheduler"
