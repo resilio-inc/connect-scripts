@@ -21,3 +21,5 @@ This folder contains solution to clean up files on source peer once they are con
 ## start-process-under-logged-on-user.ps1 ![alt text](https://i.imgur.com/F6NAQyb.png "Script supports standard Get-Help cmdlet")
 This script allows to start process (`-AppPath`) with arguments (`-AppCmd`) under currently logged on user and show UI for him. Also, you can specify working directory (`-WorkDir`) and wait till process will be ended (`-Wait`).
  
+## api_sample1.ps1
+This is an example script for Console API usage. Given a name of the agent (can be masked with wildcards) it checks that agent status in all job runs that are active now.
