@@ -1,5 +1,6 @@
-
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File verify_upgrade.ps1 > verify.log 2>&1
+rem Use -NoX86exeCheck parameter if you dont have any 32-bit machines to upgrade
+rem Use -NoExtensionUpgrade parameter to not to upgrade Explorer extensions for selective sync
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File agent_upgrade.ps1 -Verify > verify.log 2>&1
 
 set ERR=%ERRORLEVEL%
 
@@ -15,6 +16,7 @@ exit /b %ERR%
 )
 
 echo %APPDATA%\Resilio Connect Agent Service>oldstorage.path
-schtasks /create /TN ResilioUpgrade /XML ResilioUpgrade.xml /F
-schtasks /run /tn ResilioUpgrade
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File agent_upgrade.ps1 -CreateUpgradeTask
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File agent_upgrade.ps1 -RunUpgradeTask
  
