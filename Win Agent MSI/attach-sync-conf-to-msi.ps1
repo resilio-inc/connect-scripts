@@ -42,6 +42,8 @@ param (
 $ownscriptpathname = (Resolve-Path $MyInvocation.InvocationName).Path
 $ownscriptpath = Split-Path -Path $ownscriptpathname
 $ownscriptname = Split-Path $ownscriptpathname -Leaf
+$MSIPath = $MSIPath.Trim('"') 
+$SyncConfPath = $SyncConfPath.Trim('"')
 
 try
 {
