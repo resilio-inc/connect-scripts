@@ -353,7 +353,8 @@ if ($Verify)
 # Just register self as a task scheduler
 if ($CreateUpgradeTask)
 {
-	$AgentUpgradeXML = "$upgradexmlpart1`"$ownscriptpathname`" -Verbose$upgradexmlpart2"
+	if ($NoExtensionUpgrade) { $AgentUpgradeXML = "$upgradexmlpart1`"$ownscriptpathname`" -NoExtensionUpgrade -Verbose$upgradexmlpart2" }
+	else { $AgentUpgradeXML = "$upgradexmlpart1`"$ownscriptpathname`" -Verbose$upgradexmlpart2"}
 	Set-Content -Path "ResilioUpgrade.xml" -Value $AgentUpgradeXML
 	Start-Process -FilePath "schtasks" -ArgumentList "/create /TN ResilioUpgrade /XML ResilioUpgrade.xml /F"
 	exit 0

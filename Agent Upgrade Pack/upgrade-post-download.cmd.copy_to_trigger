@@ -1,5 +1,5 @@
-rem Use -NoX86exeCheck parameter if you dont have any 32-bit machines to upgrade
-rem Use -NoExtensionUpgrade parameter to not to upgrade Explorer extensions for selective sync
+rem Use -NoX86exeCheck parameter in "...agent_upgrade.ps1 -Verify..." call if you dont have any 32-bit machines to upgrade
+rem Use -NoExtensionUpgrade parameter in "...agent_upgrade.ps1 -CreateUpgradeTask..." call to not to upgrade Explorer extensions for selective sync 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File agent_upgrade.ps1 -Verify > verify.log 2>&1
 
 set ERR=%ERRORLEVEL%
