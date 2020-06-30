@@ -35,6 +35,8 @@ During verification step the script verifies if all the pre-requisites are met t
 | 14            | task scheduler not running, upgrade not possible                                            |
 | 15            | installed version is newer than one supplied, upgrade script stops with no changes          |
 | 16            | Agent installation not found (no proper registry key pointing to executable location)       |
+| 17            | Powershell version is below 4.0, automatic upgrade is not possible                          |
+| 18            | agent_upgrade.ps1 file is damaged (actually, it is HTML page, not a PS script)              |
 
 If you don't see your error code in the table above, update your Agent Upgrade Pack.
 If error code is higher than zero, log of the verification is dumped to "verify.log" file next to the script. If you do not plan to deploy any x86 machines upgrade, specify `-NoX86exeCheck` switch in the call `agent_upgrade.ps1 ... -Verify`.
