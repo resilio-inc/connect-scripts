@@ -1,5 +1,21 @@
 rem Use -NoX86exeCheck parameter in "...agent_upgrade.ps1 -Verify..." call if you dont have any 32-bit machines to upgrade
 rem Use -NoExtensionUpgrade parameter in "...agent_upgrade.ps1 -CreateUpgradeTask..." call to not to upgrade Explorer extensions for selective sync 
+
+powershell.exe -NoProfile -Command "$PSVersionTable.PSVersion.Major" > ps.version
+set /p PSVER=<ps.version
+
+if %PSVER% LSS 4 (
+echo Powershell version is older than 4.0, automatic upgrade not possible
+exit /b 17
+)
+
+findstr /I "HTML" agent_upgrade.ps1 > NULL
+
+if %ERRORLEVEL%==0 (
+echo agent_upgrade.ps1 script is actually an HTML page, please re-download from github
+exit /b 18
+)
+
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File agent_upgrade.ps1 -Verify > verify.log 2>&1
 
 set ERR=%ERRORLEVEL%
