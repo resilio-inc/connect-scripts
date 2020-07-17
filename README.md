@@ -25,7 +25,8 @@ This folder contains solution to move files that get delivered by Sync job our o
 This script allows to start process (`-AppPath`) with arguments (`-AppCmd`) under currently logged on user and show UI for him. Also, you can specify working directory (`-WorkDir`) and wait till process will be ended (`-Wait`).
 
 ## api_sample1.ps1
-This is an example script for Console API usage. Given a name of the agent (can be masked with wildcards) it checks that agent status in all job runs that are active now.
+This is an example PowerShell script that uses the Resilio Connect API. 
+Given a name of an agent (can be masked with wildcards) it checks the Agent status in all active Job Runs.
 
 ## deploy_agent_mac.sh
 This script allows to register agent of Mac as a LaunchDaemon and run under limited user accout. 
