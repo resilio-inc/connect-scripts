@@ -49,4 +49,3 @@ function getAPIRequest(APIReq) {
       }
       return new Promise(APIResponse)
 }
-
