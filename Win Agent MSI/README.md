@@ -7,4 +7,4 @@ This folder contains components to embed sync.conf file inside MSI installer. Th
 ## attach-sync-conf-to-msi.ps1 ![alt text](https://i.imgur.com/F6NAQyb.png "Script supports standard Get-Help cmdlet")
 The script performs embedding configuration file in the MSI. Script is not signed, and requires certain actions to be able to run in your environment:
 * If launching script from Powershell terminal, run `Set-ExecutionPolicy Bypass` command before using script.
-* If launching script from Windows command prompt, run `powershell.exe -ExecutionPolicy Bypass -Noprofile attach-sync-conf-to-msi.ps1 -MSIPath <path_to_msi> -SyncConfPath <path_to_config>`
+* If launching script from Windows command prompt, run `powershell.exe -ExecutionPolicy Bypass -Noprofile -File attach-sync-conf-to-msi.ps1 -MSIPath <path_to_msi> -SyncConfPath <path_to_config>`
