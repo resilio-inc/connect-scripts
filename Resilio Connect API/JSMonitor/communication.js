@@ -21,13 +21,13 @@ function initializeMCParams(url, port, token) {
     mcToken = "Token " + token;
 }
 
-function getAPIRequest(APIreq) {
+function getAPIRequest(APIReq) {
     var APIResponse = (resolve, reject) => {
         var options = {
             headers:{Authorization: mcToken},
             host: mcURL,
             port: mcPort,
-            path: APIreq
+            path: APIReq
         }
     
         https.get(options, function(res) {
