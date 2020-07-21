@@ -3,6 +3,8 @@ module.exports = {
     getAPIRequest,
 };
 
+var https = require('https');
+
 var mcURL = "";
 var mcPort = "";
 var mcToken = "";
@@ -20,6 +22,30 @@ function initializeMCParams(url, port, token) {
 }
 
 function getAPIRequest(APIreq) {
-    // TO DO: replace with real code
-    return '[{"id": 2, "name": "Cleanup"},{"id": 17, "name": "Moshe"}]';
+    var APIResponse = (resolve, reject) => {
+        var options = {
+            headers:{Authorization: mcToken},
+            host: mcURL,
+            port: mcPort,
+            path: APIreq
+        }
+    
+        https.get(options, function(res) {
+          var data = '';
+    
+          res.on('data', function(chunk) {
+            data += chunk;
+          });
+    
+          res.on('end', () => {
+            resolve(data); 
+    
+          }).on('error', (err) => {
+            console.log("there was an error:" + err);
+            reject(err);
+          }); 
+          
+        });
+      }
+      return new Promise(APIResponse)
 }
