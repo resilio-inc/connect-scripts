@@ -13,5 +13,3 @@ Handles retrieving agents-related information, parsing it, and storing in the da
 
 ## utils.js
 That's a place holder for all utility functions (e.g., compare arrays). 
-
-#
