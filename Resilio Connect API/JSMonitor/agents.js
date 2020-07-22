@@ -18,8 +18,7 @@ function updateAgentList() {
         for (let index = 0; index < agents.length; index++) {
             const element = agents[index];
             setAgentProperty(element.id, "name", element.name);
-            setAgentProperty(element.id, "stutus", element.online);
-
+            setAgentProperty(element.id, "status", element.online);
         }
     });
 }
