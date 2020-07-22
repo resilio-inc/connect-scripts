@@ -1,10 +1,12 @@
 //module.exports = {};
 
 module.exports = {
-    updateAgentList
+    updateAgentList,
+    updateJobsPerAgent
 };
 
 const { getAgentProperty, setAgentProperty } = require('./data-store');
+const { setJobProperty } = require('./data-store')
 const { getAPIRequest } = require('./communication');
 
 function updateAgentList() {
@@ -24,7 +26,18 @@ function updateAgentList() {
 }
 
 function updateJobsPerAgent() {
-    // call api
-    // update the data store
+    getAPIRequest("/api/v2/jobs")
+    .then((APIResponse) => {
+        
+        const jobs = JSON.parse(APIResponse);
+
+        for(var i = 0; i < jobs.length; i++) {
+            const element = jobs[i];
+            for(var x = 0; x < jobs[i]["agents"].length; x++){ 
+              const element2 = jobs[i].agents[x];
+              setJobProperty(element.id, "agents", element2);
+            }
+        }   
+    });
 }
 
