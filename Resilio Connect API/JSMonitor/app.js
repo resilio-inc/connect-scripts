@@ -3,7 +3,7 @@
 const { initializeMCParams, getAPIRequest } = require('./communication');
 const { getAgentProperty, setAgentProperty } = require('./data-store');
 const { getJobProperty, setJobProperty } = require('./data-store');
-const { updateAgentList } = require('./agents');
+const { updateAgentList, updateJobsPerAgent } = require('./agents');
 
 //const { getAgentName, isAgentOnline, getAgentJobList } = require('./agents');
 
@@ -25,6 +25,10 @@ updateAgentList();
 
 setTimeout(function(){console.log (getAgentProperty(1, "name"));}, 3000);
 setTimeout(function(){console.log (getAgentProperty(1, "status"));}, 3000);
+
+updateJobsPerAgent();
+
+setTimeout(function(){console.log (getJobProperty(2, "agents"));}, 3000)
 
 
 
