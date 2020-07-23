@@ -4,7 +4,10 @@ module.exports = {
     getAgentProperty,
     setJobProperty,
     getJobProperty,
+    enumerateAgents,
 };
+
+const { getAPIRequest } = require('./communication');
 
 var agents = {};
 var jobs = {};
@@ -40,3 +43,21 @@ function getJobProperty(id, propertyName) {
         throw "No such id or propertyName";
     }    
 }
+
+function enumerateAgents() {
+    getAPIRequest("/api/v2/agents")
+    .then((APIResponse) => {
+
+        const agents = JSON.parse(APIResponse);
+        let listOfAllAgents = [];
+
+        for(let i = 0; i < agents.length; i++) {
+            const element = agents[i];
+            listOfAllAgents.push(element.id);
+        }
+        
+        return listOfAllAgents
+
+    });
+}
+
