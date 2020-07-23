@@ -49,14 +49,14 @@ function enumerateAgents() {
     .then((APIResponse) => {
 
         const agents = JSON.parse(APIResponse);
-        let listOfAllAgents = [];
+        let listAllAgentIDs = [];
 
         for(let i = 0; i < agents.length; i++) {
             const element = agents[i];
-            listOfAllAgents.push(element.id);
+            listAllAgentIDs.push(element.id);
         }
         
-        return listOfAllAgents
+        return listAllAgentIDs
 
     });
 }
