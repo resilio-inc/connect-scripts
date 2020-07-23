@@ -43,12 +43,12 @@ function getJobProperty(id, propertyName) {
 }
 
 function enumerateAgents() {
-    let listAllAgents = []
+    let listAllAgents = [];
+    
     for(var key in agents) {
-        if(agents.hasOwnProperty(key)) {
-            listAllAgents.push(Number(key));
-        }
+        listAllAgents.push(Number(key));
     }
+    
     return listAllAgents;
 }
 
