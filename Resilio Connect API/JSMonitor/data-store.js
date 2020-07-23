@@ -7,8 +7,6 @@ module.exports = {
     enumerateAgents,
 };
 
-const { getAPIRequest } = require('./communication');
-
 var agents = {};
 var jobs = {};
 
@@ -45,19 +43,12 @@ function getJobProperty(id, propertyName) {
 }
 
 function enumerateAgents() {
-    getAPIRequest("/api/v2/agents")
-    .then((APIResponse) => {
-
-        const agents = JSON.parse(APIResponse);
-        let listAllAgentIDs = [];
-
-        for(let i = 0; i < agents.length; i++) {
-            const element = agents[i];
-            listAllAgentIDs.push(element.id);
+    let listAllAgents = []
+    for(var key in agents) {
+        if(agents.hasOwnProperty(key)) {
+            listAllAgents.push(Number(key));
         }
-        
-        return listAllAgentIDs
-
-    });
+    }
+    return listAllAgents;
 }
 

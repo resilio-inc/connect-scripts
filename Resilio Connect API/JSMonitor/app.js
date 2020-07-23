@@ -34,5 +34,5 @@ setTimeout(function(){console.log (getJobProperty(2, "agents"));}, 3000);
 
 setTimeout(function() {console.log(enumerateAgents());}, 5000);
 
-setTimeout(function() {console.log(findArrayDiff([1, 2, 3, 4], [1, 2]));}, 6000)
+console.log(findArrayDiff([1, 2, 3, 4, 5], [4, 5, 6]));
 
