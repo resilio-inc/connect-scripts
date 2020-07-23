@@ -33,11 +33,15 @@ function updateJobsPerAgent() {
 
         for(var i = 0; i < jobs.length; i++) {
             const element = jobs[i];
+            const agentArray = [];
+
             for(var x = 0; x < jobs[i]["agents"].length; x++){ 
               const element2 = jobs[i].agents[x];
-              setJobProperty(element.id, "agents", element2);
+              agentArray.push(element2.id);
             }
-        }   
+            
+            setJobProperty(element.id, "agents", agentArray);
+        }
     });
 }
 
