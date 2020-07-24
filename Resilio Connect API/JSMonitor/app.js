@@ -34,5 +34,5 @@ setTimeout(function(){console.log (getJobProperty(2, "agents"));}, 3000);
 
 setTimeout(function() {console.log(enumerateAgents());}, 5000);
 
-console.log(findArrayDiff([1, 5, 17, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 165], [1, 5, 17, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159]));
+console.log(findArrayDiff([1, 5, 17, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160], [1, 5, 17, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 165]));
 
