@@ -4,6 +4,7 @@ const { initializeMCParams, getAPIRequest } = require('./communication');
 const { getAgentProperty, setAgentProperty } = require('./data-store');
 const { getJobProperty, setJobProperty } = require('./data-store');
 const { updateAgentList, updateJobsPerAgent } = require('./agents');
+const { initializeTexting, SendMessage } = require ('./messaging');
 
 //const { getAgentName, isAgentOnline, getAgentJobList } = require('./agents');
 
@@ -19,7 +20,7 @@ console.log("the name of job 17 is: " + getJobProperty(17, "name"));
 
 initializeMCParams("demo29.resilio.com", 8443, "6BZK5YQ6ER72NWP2GB7MYKEGA2AQZUXCCEVU7G7H4JTDGLDRNPMA");
 console.log("some fake api response: " + getAPIRequest("/api/v2/jobs"));
-
+-
 
 updateAgentList();
 
@@ -30,7 +31,9 @@ updateJobsPerAgent();
 
 setTimeout(function(){console.log (getJobProperty(2, "agents"));}, 3000)
 
+initializeTexting('+12029725018', 'AC538355e6f8d94f8e2867c89d6a7637c4','07b7ca1f0a50ebc2ea8d452d6c13b398');
 
+setTimeout(function(){console.log(SendMessage('+15103652913', 'hello dawg'));}, 3000);
 
 
 
