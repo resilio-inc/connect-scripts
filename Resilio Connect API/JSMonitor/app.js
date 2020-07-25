@@ -36,3 +36,21 @@ setTimeout(function() {console.log(enumerateAgents());}, 5000);
 
 console.log(findArrayDiff([1, 5, 17, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160], [1, 5, 17, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 165]));
 
+var prevList, updatedList;
+
+function periodicAgentUpdate() {
+    updatedList = enumerateAgents();
+    prevList = updatedList; 
+
+    if (findArrayDiff(updatedList, prevList).length != 0) {
+        console.log("ALERT: " + findArrayDiff(updatedList, prevList));
+    } else {
+        console.log("ALERT: No new agent IDs");
+    }
+
+    updateAgentList();
+    setTimeout(function() {periodicAgentUpdate();}, 30000);
+
+}
+
+periodicAgentUpdate();

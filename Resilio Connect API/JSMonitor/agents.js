@@ -12,7 +12,7 @@ const { getAPIRequest } = require('./communication');
 function updateAgentList() {
     getAPIRequest("/api/v2/agents")
     .then((APIResponse) => {
-        console.log("response = " + APIResponse);
+        //console.log("response = " + APIResponse);
     
         const agentsJson = APIResponse; 
         const agents = JSON.parse(agentsJson);
