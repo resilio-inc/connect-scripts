@@ -21,7 +21,7 @@ function getAgentProperty(id, propertyName) {
     if (agents.hasOwnProperty(id) && agents[id].hasOwnProperty(propertyName)) {
         return agents[id][propertyName];
     } else {
-        throw "No such id or propertyName";
+        throw "No such id or propertyName - " + id + "," + propertyName;
     }
 }
 

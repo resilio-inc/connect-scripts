@@ -3,14 +3,15 @@ module.exports= {
   SendMessage
 };
 
+
 function initializeTexting(from, Sid, Token) {
     mcFrom = from;
     mcSid = Sid;
     mcToken = Token;
 }
 
-var twilio = require('twilio');
 
+var twilio = require('twilio');
 
 function SendMessage(to, body) {
     
@@ -25,7 +26,6 @@ client.messages
          to: to,
        })
       .then(message => console.log(message.status))
-
 }
 
 
