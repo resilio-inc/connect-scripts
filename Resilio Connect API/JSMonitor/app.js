@@ -38,21 +38,27 @@ console.log(findArrayDiff([1, 5, 17, 149, 150, 151, 152, 153, 154, 155, 156, 157
 
 var prevList;
 var updatedList = [];
+let arrayDiff = [];
 
-function periodicAgentUpdate() {
+// function definition
+function periodicAgentUpdate(freq, callback) {
     prevList = updatedList; 
     updatedList = enumerateAgents();
 
-    if (findArrayDiff(updatedList, prevList).length != 0) {
-        console.log("ALERT: " + findArrayDiff(updatedList, prevList));
-    } else {
-        console.log("ALERT: No new agent IDs");
-    }
+    arrayDiff = findArrayDiff(updatedList, prevList);
+    callback();
 
     updateAgentList();
-    setTimeout(function() {periodicAgentUpdate();}, 30000);
+    setTimeout(function() {periodicAgentUpdate(30000, function() {
+        if (arrayDiff.length != 0) {
+            console.log("ALERT: The new agents are " + arrayDiff);
+        } else {
+            console.log("ALERT: No new agent IDs");
+        }
+    });}, freq);
 
 }
 
-periodicAgentUpdate();
-
+// calling the function
+periodicAgentUpdate(30000, () => {}); // JACK: inputting this empty callback function was my solution to the initial immediate alert that there was no new agent IDs,
+                                      // but something about doing that doesn't feel as efficient as possible. Is it?
