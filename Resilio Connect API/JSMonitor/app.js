@@ -7,7 +7,7 @@ const { enumerateAgents } = require('./data-store');
 const { updateAgentList, updateJobsPerAgent } = require('./agents');
 const { findArrayDiff } = require('./utils');
 
-//const { getAgentName, isAgentOnline, getAgentJobList } = require('./agents');
+const { getAgentName, isAgentOnline, getAgentJobList } = require('./agents');
 
 setAgentProperty(5, "name", "abc");
 setAgentProperty(17, "name", "xyz");
@@ -37,28 +37,43 @@ setTimeout(function() {console.log(enumerateAgents());}, 5000);
 console.log(findArrayDiff([1, 5, 17, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160], [1, 5, 17, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 165]));
 
 var prevList;
-var updatedList = [];
-let arrayDiff = [];
+var callCounter = 0;
 
-// function definition
-function periodicAgentUpdate(freq, callback) {
-    prevList = updatedList; 
-    updatedList = enumerateAgents();
+class updateListofAgents {
 
-    arrayDiff = findArrayDiff(updatedList, prevList);
-    callback();
+    constructor() {
+        this.updatedList = [];
+        this.arrayDiff = [];
+    }
+    
+    periodicUpdate(freq, ifDifferent) {
+        prevList = this.updatedList;
+        this.updatedList = enumerateAgents();
 
-    updateAgentList();
-    setTimeout(function() {periodicAgentUpdate(30000, function() {
-        if (arrayDiff.length != 0) {
-            console.log("ALERT: The new agents are " + arrayDiff);
-        } else {
-            console.log("ALERT: No new agent IDs");
+        this.arrayDiff = findArrayDiff(this.updatedList, prevList);
+        if (callCounter != 0) {
+            if (this.arrayDiff.length != 0) {
+                ifDifferent(this.arrayDiff);
+            } else {
+                console.log("ALERT: No new agents this cycle");
+            }
         }
-    });}, freq);
+
+        updateAgentList();
+        callCounter++;
+        setTimeout(function() {update.periodicUpdate(freq, ifDifferent);}, freq);
+
+    }
 
 }
 
-// calling the function
-periodicAgentUpdate(30000, () => {}); // JACK: inputting this empty callback function was my solution to the initial immediate alert that there was no new agent IDs,
-                                      // but something about doing that doesn't feel as efficient as possible. Is it?
+const update = new updateListofAgents()
+update.periodicUpdate(30000, (diffArray) => {
+    if (callCounter == 1) {
+        console.log("ALERT: The initial agents are " + diffArray)
+    } else {
+        console.log("ALERT: The new agents this cycle are " + diffArray);
+       
+    }
+});
+
