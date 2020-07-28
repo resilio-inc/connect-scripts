@@ -334,6 +334,24 @@ function Verify-UpgradePossible
 	}
 	return $errcode
 }
+# --------------------------------------------------------------------------------------------------------------------------------
+
+function Get-BinaryArchitecture
+{
+	param
+	(
+		[parameter(Mandatory = $true)]
+		[string]$Path
+	)
+	$PEHeader = [System.IO.File]::ReadAllBytes($path)
+	
+	$PE_POINTER = [System.BitConverter]::ToUInt32($PEHeader, 60)
+	if ($PE_POINTER -gt 4096 -or $PE_POINTER -eq 0) { throw "Cannot determine binary architecture" }
+	$Arch = [System.BitConverter]::ToUInt16($PEHeader, $PE_POINTER + 4)
+	
+	if ($Arch -eq 0x014c) { return "x86" }
+	if ($Arch -eq 0x0200 -or $Arch -eq 0x8664) { return "x64" }
+}
 
 # --------------------------------------------------------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------------------------------------------------------
@@ -384,20 +402,28 @@ try
 	$extensionx86 = "SyncShellContextMenu_x86.dll"
 	$extensionx64 = "SyncShellContextMenu_x64.dll"
 	$newstoragepath = "$env:ProgramData\Resilio\Connect Agent\"
-	if ([IntPtr]::size -eq 8)
-	{
-		$agentupgradeble = $agentupgradeablex64
-		Write-Verbose "OS identified as x64 bit version of Windows"
-	}
-	else
-	{
-		$agentupgradeble = $agentupgradeablex86
-		Write-Verbose "OS identified as x86 bit version of Windows"
-	}
-	
 	$processpath = (Get-ItemProperty -path 'HKLM:\SOFTWARE\Resilio, Inc.\Resilio Connect Agent\').InstallDir
 	Write-Verbose "Found Agent installed to: $processpath"
 	$fullexepath = Join-Path -Path $processpath -ChildPath $processname
+	$ExeArchitecture = Get-BinaryArchitecture -Path $fullexepath
+	if ($ExeArchitecture)
+	{
+		if ($ExeArchitecture -eq 'x86')
+		{
+			$agentupgradeble = $agentupgradeablex86
+			Write-Verbose "OS identified as x86 bit version of Windows"
+		}
+		else
+		{
+			$agentupgradeble = $agentupgradeablex64
+			Write-Verbose "OS identified as x64 bit version of Windows"
+		}
+	}
+	else
+	{
+		$agentupgradeble = $agentupgradeablex64
+		Write-Verbose "Failed to determine executable architecture, using x64 by default"
+	}
 	$fullupgradeablepath = Join-Path -Path $ownscriptpath -ChildPath $agentupgradeble
 	[System.Version]$oldversion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("$fullexepath").FileVersion
 	[System.Version]$newversion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("$fullupgradeablepath").FileVersion

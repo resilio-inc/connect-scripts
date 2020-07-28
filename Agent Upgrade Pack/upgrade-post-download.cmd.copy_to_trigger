@@ -9,6 +9,11 @@ echo Powershell version is older than 4.0, automatic upgrade not possible
 exit /b 17
 )
 
+if not exist "agent_upgrade.ps1" (
+echo agent_upgrade.ps1 script not found
+exit /b 4
+)
+
 findstr /I "HTML" agent_upgrade.ps1 > NULL
 
 if %ERRORLEVEL%==0 (
