@@ -58,11 +58,9 @@ class updateListofAgents {
                 console.log("ALERT: No new agents this cycle");
             }
         }
-
         updateAgentList();
         callCounter++;
         setTimeout(function() {update.periodicUpdate(freq, ifDifferent);}, freq);
-
     }
 
 }
@@ -73,7 +71,6 @@ update.periodicUpdate(30000, (diffArray) => {
         console.log("ALERT: The initial agents are " + diffArray)
     } else {
         console.log("ALERT: The new agents this cycle are " + diffArray);
-       
     }
 });
 
