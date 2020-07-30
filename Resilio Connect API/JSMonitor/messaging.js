@@ -24,7 +24,7 @@ client.messages
          body: body,
          from: mcFrom,
          to: to,
-       })
+      })
       .then(message => console.log(message.status))
 }
 
