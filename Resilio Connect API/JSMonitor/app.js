@@ -36,41 +36,36 @@ setTimeout(function() {console.log(enumerateAgents());}, 5000);
 
 console.log(findArrayDiff([1, 5, 17, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160], [1, 5, 17, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 165]));
 
-var prevList;
-var callCounter = 0;
-
 class updateListofAgents {
 
     constructor() {
         this.updatedList = [];
         this.arrayDiff = [];
+        this.prevList = [];
+        this.callCounter = 0;
     }
     
-    periodicUpdate(freq, ifDifferent) {
-        prevList = this.updatedList;
+    periodicUpdate(freq, onDifferentCallback) {
+        this.prevList = this.updatedList;
         this.updatedList = enumerateAgents();
 
-        this.arrayDiff = findArrayDiff(this.updatedList, prevList);
-        if (callCounter != 0) {
+        this.arrayDiff = findArrayDiff(this.updatedList, this.prevList);
+        if (this.callCounter != 0) {
             if (this.arrayDiff.length != 0) {
-                ifDifferent(this.arrayDiff);
+                onDifferentCallback(this.arrayDiff);
             } else {
                 console.log("ALERT: No new agents this cycle");
             }
         }
         updateAgentList();
-        callCounter++;
-        setTimeout(function() {update.periodicUpdate(freq, ifDifferent);}, freq);
+        this.callCounter++;
+        setTimeout(function() {update.periodicUpdate(freq, onDifferentCallback);}, freq);
     }
 
 }
 
 const update = new updateListofAgents()
 update.periodicUpdate(30000, (diffArray) => {
-    if (callCounter == 1) {
-        console.log("ALERT: The initial agents are " + diffArray)
-    } else {
-        console.log("ALERT: The new agents this cycle are " + diffArray);
-    }
+    console.log("ALERT: The new agents this cycle are " + diffArray);
 });
 
