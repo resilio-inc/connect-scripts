@@ -2,33 +2,32 @@
 
 module.exports= {
   initializeTexting,
-  SendMessage
+  sendMessage
 };
 
+var accountFrom = "";
+var accountSid = "";
+var accountToken = "";
+var client;
 
+/**
+ * 
+ * @param {string} from 
+ * @param {string} Sid 
+ * @param {string} Token 
+ */
 function initializeTexting(from, Sid, Token) {
-    mcFrom = from;
-    mcSid = Sid;
-    mcToken = Token;
+  accountFrom = from;
+  accountSid = Sid;
+  accountToken = Token;
+  client = require('twilio')(accountSid, accountToken);
 }
 
-
-var twilio = require('twilio');
-
-function SendMessage(to, body) {
-    
-const accountSid = mcSid;
-const authToken = mcToken;
-const client = require('twilio')(accountSid, authToken);
-
-client.messages
-      .create({
-         body: body,
-         from: mcFrom,
-         to: to,
-      })
-      .then(message => console.log(message.status))
+function sendMessage(to, body) {
+  client.messages.create({
+    body: body,
+    from: accountFrom,
+    to: to,
+  })
+  .then(message => console.log("Twilio message and status: \"" + message.body + "\"; " + message.status))
 }
-
-
-
