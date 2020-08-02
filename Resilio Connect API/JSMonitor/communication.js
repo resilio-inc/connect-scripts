@@ -8,7 +8,7 @@ module.exports = {
 var https = require('https');
 
 var mcURL = "";
-var mcPort = "";
+var mcPort = 0;
 var mcToken = "";
 
 /**
