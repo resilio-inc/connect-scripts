@@ -4,6 +4,7 @@ module.exports = {
     getAgentProperty,
     setJobProperty,
     getJobProperty,
+    enumerateAgents,
 };
 
 var agents = {};
@@ -40,3 +41,14 @@ function getJobProperty(id, propertyName) {
         throw "No such id or propertyName";
     }    
 }
+
+function enumerateAgents() {
+    let listAllAgents = [];
+    
+    for(var key in agents) {
+        listAllAgents.push(Number(key));
+    }
+    
+    return listAllAgents;
+}
+

@@ -39,7 +39,7 @@ function updateJobsPerAgent() {
               const element2 = jobs[i].agents[x];
               agentArray.push(element2.id);
             }
-            
+
             setJobProperty(element.id, "agents", agentArray);
         }
     });
