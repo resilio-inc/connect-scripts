@@ -1,4 +1,5 @@
 // @ts-check
+
 module.exports = {
     setAgentProperty,
     getAgentProperty,

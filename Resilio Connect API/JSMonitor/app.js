@@ -1,6 +1,5 @@
 // @ts-check
 
-
 const { initializeMCParams, getAPIRequest } = require('./communication');
 const { getAgentProperty, setAgentProperty } = require('./data-store');
 const { getJobProperty, setJobProperty } = require('./data-store');
