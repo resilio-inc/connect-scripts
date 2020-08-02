@@ -2,12 +2,14 @@
 
 module.exports = {
     updateAgentList,
-    updateJobsPerAgent
+    updateJobsPerAgent,
+    periodicAgentUpdate
 };
 
-const { getAgentProperty, setAgentProperty } = require('./data-store');
+const { getAgentProperty, setAgentProperty, enumerateAgents } = require('./data-store');
 const { setJobProperty } = require('./data-store')
 const { getAPIRequest } = require('./communication');
+const { findArrayDiff } = require('./utils');
 
 function updateAgentList() {
     getAPIRequest("/api/v2/agents")
@@ -43,5 +45,39 @@ function updateJobsPerAgent() {
             setJobProperty(element.id, "agents", agentArray);
         }
     });
+}
+
+class updateListofAgents {
+
+    constructor() {
+        this.updatedList = [];
+        this.arrayDiff = [];
+        this.prevList = [];
+        this.callCounter = 0;
+    }
+    
+    periodicUpdate(onDifferentCallback, onNoChangeCallback) {
+        this.prevList = this.updatedList;
+        this.updatedList = enumerateAgents();
+
+        this.arrayDiff = findArrayDiff(this.updatedList, this.prevList);
+        if (this.callCounter != 0) {
+            if (this.arrayDiff.length != 0) {
+                onDifferentCallback(this.arrayDiff);
+            } else {
+                onNoChangeCallback();
+            }
+        }
+        updateAgentList();
+        this.callCounter++;
+    }
+
+}
+
+var update = new updateListofAgents;
+
+function periodicAgentUpdate(onDifferentCallback, onNoChangeCallback, freq) {
+    update.periodicUpdate(onDifferentCallback, onNoChangeCallback);
+    setTimeout(() => {periodicAgentUpdate(onDifferentCallback, onNoChangeCallback, freq)}, freq);
 }
 
