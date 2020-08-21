@@ -7,6 +7,7 @@ const { enumerateAgents } = require('./data-store');
 const { updateAgentList, updateJobsPerAgent, periodicAgentUpdate } = require('./agents');
 const { initializeTexting, sendMessage } = require ('./messaging');
 const { addNewStorage } = require('./storages');
+const { addJob, appendToJobAgentList } = require('./jobs');
 const { findArrayDiff } = require('./utils');
 
 function testAgentList() {
@@ -48,6 +49,16 @@ getAPIRequest("/api/v2/info")
     console.log("MC Info: " + APIResponse);
 });
 
+//updateAgentList();
+
+/*
 addNewStorage("s3", "s3 storage 2", "some desc", 
     "ABSGNHYTDR9495969784", "ABSGNHYTDR9495969784ABSGNHYTDR949596978=",
     "bucketname", "gg-hht-9");
+*/
+
+var jobAgentList = [];
+jobAgentList = appendToJobAgentList(jobAgentList, 1, "rw", "/somepath");
+jobAgentList = appendToJobAgentList(jobAgentList, 150, "ro", "/somepath");
+addJob("test job 1", "test job", "distribution", jobAgentList);
+
