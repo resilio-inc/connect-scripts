@@ -42,7 +42,7 @@ function testAgentUpdate() {
 // read-only:
 //initializeMCParams("demo29.resilio.com", 8443, "READ_ONLY-KEY");
 // read/write:
-initializeMCParams("demo29.resilio.com", 8443, "READ-WRITE-KEY");
+initializeMCParams("demo29.resilio.com", 8443, process.env.RESILIO_AUTH_TOKEN);
 
 // get the MC version
 getAPIRequest("/api/v2/info")
@@ -56,7 +56,8 @@ console.log("\nMC Info: " + APIResponse);
 
 // add a storage bucket
 addNewStorage("s3", "s3 storage 2", "some desc", 
-        "ACCESS_ID", "ACCESS_SECRET",
+        process.env.RESILIO_TEST_S3_BUCKET_ACCESS_ID,
+        process.env.RESILIO_TEST_S3_BUCKET_SECRET,
         "ilan-test-2", "us-west-1")
 .then((APIResponse) => { 
 console.log("\nMC Response: " + APIResponse);
