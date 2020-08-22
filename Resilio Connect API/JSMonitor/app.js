@@ -7,8 +7,9 @@ const { enumerateAgents } = require('./data-store');
 const { updateAgentList, updateJobsPerAgent, periodicAgentUpdate } = require('./agents');
 const { initializeTexting, sendMessage } = require ('./messaging');
 const { addNewStorage, deleteStorage } = require('./storages');
-const { addJob, startJob, getJobRunStatus, updateJobRunStatus, appendToJobAgentList, deleteJob } = require('./jobs');
+const { addJob, startJob, getJobRunStatus, getJobRunID, monitorJob, appendToJobAgentList, deleteJob } = require('./jobs');
 const { findArrayDiff } = require('./utils');
+const { exit } = require('process');
 
 function testAgentList() {
     updateAgentList();
@@ -48,6 +49,11 @@ initializeMCParams("demo29.resilio.com", 8443, process.env.RESILIO_AUTH_TOKEN);
 getAPIRequest("/api/v2/info")
 .then((APIResponse) => {
 console.log("MC Info: " + APIResponse);
+APIResponse = JSON.parse(APIResponse);
+const code = APIResponse["code"];
+if (code == 401) {
+    throw("invalid auth token");
+}
 
 // get the list of agents
 updateAgentList()       // this populates the "data-store"   
@@ -86,7 +92,7 @@ APIResponse = JSON.parse(APIResponse);
 const runID = APIResponse["id"];
 
 // check on the status of the job every x msec
-updateJobRunStatus(runID, 5000, cleanupWhenDone);
+monitorJob(runID, cleanupWhenDone, 5000);
 
 // add a synchronization job
 var jobAgentList = [];
@@ -99,15 +105,17 @@ console.log("\nMC Response: " + APIResponse);
 APIResponse = JSON.parse(APIResponse);
 const jobID = APIResponse["id"];
 
-// start the job
-startJob(jobID)
+// no need to start sync jobs.  
+
+// need to get the runID for this job
+getJobRunID(jobID)
 .then((APIResponse) => { 
 console.log("\nMC Response: " + APIResponse);
 APIResponse = JSON.parse(APIResponse);
-const runID = APIResponse["id"];
-
+const runID = APIResponse.data[0]["id"];
+    
 // check on the status of the job every x msec
-updateJobRunStatus(runID, 5000, cleanupWhenDone);
+monitorJob(runID, cleanupWhenDone, 5000);
 
 });
 });
@@ -116,6 +124,7 @@ updateJobRunStatus(runID, 5000, cleanupWhenDone);
 });
 });
 });
+
 
 function cleanupWhenDone(jobID) {
     // cleanup

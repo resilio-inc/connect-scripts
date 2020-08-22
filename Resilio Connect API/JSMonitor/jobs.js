@@ -4,7 +4,8 @@ module.exports = {
     addJob,
     startJob,
     getJobRunStatus,
-    updateJobRunStatus,
+    getJobRunID,
+    monitorJob,
     deleteJob,
     appendToJobAgentList,
 };
@@ -66,33 +67,64 @@ function getJobRunStatus(runID) {
     return new Promise(getJobRunStatusResponse);
 }
 
-// check on the status of the job after x msec
-var monitorJobID;
-var monitoredRunID;
-var monitorInterval;
-var monitorStatus;
-var monitorCode;
-var monitorCallback
-function updateJobRunStatus(runID, interval, finishedCallbackFunction) {
-    monitoredRunID = runID;
-    monitorInterval = interval;
-    monitorCallback = finishedCallbackFunction;
-    getJobRunStatus(runID)
-    .then((APIResponse) => { 
-        console.log("\nMC Info: " + APIResponse);
-        APIResponse = JSON.parse(APIResponse);
-        monitorJobID = APIResponse["job_id"];
-        monitorStatus = APIResponse["status"];
-        monitorCode = APIResponse["code"];
-    });
-    if ((monitorStatus != "finished") && (monitorCode != 404)){
-        setTimeout(() => { updateJobRunStatus(monitoredRunID, monitorInterval, monitorCallback); }, monitorInterval);
-    } else {
-        monitorStatus = "";
-        monitorCode = 0;
-        finishedCallbackFunction(monitorJobID)
+function getJobRunID(jobID) {
+    var getJobRunIDResponse = (resolve, reject) => {
+        getAPIRequest("/api/v2/runs?job_id=" + jobID)
+        .then((APIResponse) => {
+            resolve(APIResponse);
+        });
+    }
+    return new Promise(getJobRunIDResponse);
+}
+
+class jobMonitor {
+
+    constructor(runID, finishedCallbackFunction) {
+        this.monitorJobID = 0;
+        this.monitoredRunID = runID;
+        this.monitorJobStatus = "";
+        this.monitorErrCode = 200;
+        this.monitorCallback = finishedCallbackFunction;
+    }
+
+    getJobStatus() {
+        return this.monitorJobStatus
+    }
+
+    getErrCode() {
+        return this.monitorErrCode
+    }
+
+    updateJobRunStatus() {
+        getJobRunStatus(this.monitoredRunID)
+        .then((APIResponse) => { 
+            console.log("\nMC Info: " + APIResponse);
+            APIResponse = JSON.parse(APIResponse);
+            this.monitorJobID = APIResponse["job_id"];
+            this.monitorJobStatus = APIResponse["status"];
+            this.monitorErrCode = APIResponse["code"];
+            if (this.monitorJobStatus == "finished") {
+                this.monitorCallback(this.monitorJobID);
+            }
+        });
     }
 }
+
+var jobRuns = {};
+
+function monitorJob(runID, finishedCallbackFunction, monitorInterval) {
+    if (!jobRuns.hasOwnProperty(runID)) {
+        jobRuns[runID] = new jobMonitor(runID, finishedCallbackFunction);
+    }
+    if ((jobRuns[runID].getJobStatus() != "finished") && (jobRuns[runID].getErrCode != 404)) {
+        setTimeout(() => { 
+            jobRuns[runID].updateJobRunStatus();
+            monitorJob(runID, finishedCallbackFunction, monitorInterval);
+        }, monitorInterval);
+    } else {
+        delete jobRuns[runID];
+    }
+} 
 
 function deleteJob(jobID) {
     var deleteJobResponse = (resolve, reject) => {
