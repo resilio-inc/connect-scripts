@@ -71,7 +71,7 @@ var jobAgentList = [];
 // we use the first 2 Agents in the agentList
 jobAgentList = appendToJobAgentList(jobAgentList, agentList[0], "rw", "Project Files", storageID);   
 jobAgentList = appendToJobAgentList(jobAgentList, agentList[1], "ro", "/tmp/Project Files");
-addJob("test job 1", "test job", "distribution", jobAgentList)
+addJob("Test Distribution Job 1", "A demo distribution job", "distribution", jobAgentList)
 .then((APIResponse) => { 
 console.log("\nMC Info: " + APIResponse);
 APIResponse = JSON.parse(APIResponse);
