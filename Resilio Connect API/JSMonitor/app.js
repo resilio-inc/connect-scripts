@@ -9,7 +9,6 @@ const { initializeTexting, sendMessage } = require ('./messaging');
 const { addNewStorage, deleteStorage } = require('./storages');
 const { addJob, startJob, getJobRunStatus, getJobRunID, monitorJob, appendToJobAgentList, deleteJob } = require('./jobs');
 const { findArrayDiff } = require('./utils');
-const { exit } = require('process');
 
 function testAgentList() {
     updateAgentList();
