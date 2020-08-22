@@ -1,6 +1,5 @@
-## app.js
-That's the main application file that makes calls to other components.
-For now, it only includes some sample code.
+## agents.js
+Handles retrieving agents-related information, parsing it, and storing in the data store.
 
 ## communication.js
 Handles all the communication with the Resilio Connect Management Console.
@@ -8,8 +7,24 @@ Handles all the communication with the Resilio Connect Management Console.
 ## data-store.js
 Used to store the information retrieved by the API calls.
 
-## agents.js
-Handles retrieving agents-related information, parsing it, and storing in the data store.
+## jobs.js
+Handles Job and Run related calls.
+
+## storages.js
+Handles Storages related calls.
 
 ## utils.js
-That's a place holder for all utility functions (e.g., compare arrays). 
+Utility functions (e.g., compare arrays). 
+
+## messaging.js
+Twilio integration
+
+## app.js
+That's the main application file that makes calls to other components.
+
+
+
+
+
+
+
