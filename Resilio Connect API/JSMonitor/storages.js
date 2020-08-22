@@ -3,9 +3,20 @@
 module.exports = {
     addNewStorage,
     deleteStorage,
+    getStorages,
 };
 
-const { initializeMCParams, getAPIRequest, postAPIRequest, deleteAPIRequest } = require('./communication');
+const { initializeMCParams, getAPIRequest, postAPIRequest, deleteAPIRequest, } = require('./communication');
+
+function getStorages() {
+    var getStoragesResponse = (resolve, reject) => {
+        getAPIRequest("/api/v2/storages")
+        .then((APIResponse) => {
+            resolve(APIResponse);
+        });
+    }
+    return new Promise(getStoragesResponse);  
+}
 
 function addNewStorage(type, name, desc, access_id, access_secret, bucket, region) {
     var addNewStorageResponse = (resolve, reject) => {
