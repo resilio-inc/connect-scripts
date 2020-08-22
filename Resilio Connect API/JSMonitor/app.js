@@ -40,9 +40,9 @@ function testAgentUpdate() {
 }
 
 // read-only:
-//initializeMCParams("demo29.resilio.com", 8443, "6BZK5YQ6ER72NWP2GB7MYKEGA2AQZUXCCEVU7G7H4JTDGLDRNPMA");
+//initializeMCParams("demo29.resilio.com", 8443, "READ_ONLY-KEY");
 // read/write:
-initializeMCParams("demo29.resilio.com", 8443, "6DJXHMQIR4NWJKPOGODURZQSZMMN47WYKLGISON6P3PVMK7JOKJQ");
+initializeMCParams("demo29.resilio.com", 8443, "READ-WRITE-KEY");
 
 // get the MC version
 getAPIRequest("/api/v2/info")
@@ -56,37 +56,60 @@ console.log("\nMC Info: " + APIResponse);
 
 // add a storage bucket
 addNewStorage("s3", "s3 storage 2", "some desc", 
-        "AKIAVOH6NAJMQMSOZINA", "tiBPNWkCw6ejaqmj/8rzBwM/+a0FuPW9XLUuefXz",
+        "ACCESS_ID", "ACCESS_SECRET",
         "ilan-test-2", "us-west-1")
 .then((APIResponse) => { 
-console.log("\nMC Info: " + APIResponse);
+console.log("\nMC Response: " + APIResponse);
 APIResponse = JSON.parse(APIResponse);
 const storageID = APIResponse["id"];
 
 // enumerate the Agents
 var agentList = enumerateAgents();  // this just reads the list from the "data-store"
 
-// add a job
+// add a distribution job
 var jobAgentList = [];
 // we use the first 2 Agents in the agentList
 jobAgentList = appendToJobAgentList(jobAgentList, agentList[0], "rw", "Project Files", storageID);   
 jobAgentList = appendToJobAgentList(jobAgentList, agentList[1], "ro", "/tmp/Project Files");
 addJob("Test Distribution Job 1", "A demo distribution job", "distribution", jobAgentList)
 .then((APIResponse) => { 
-console.log("\nMC Info: " + APIResponse);
+console.log("\nMC Response: " + APIResponse);
 APIResponse = JSON.parse(APIResponse);
 const jobID = APIResponse["id"];
 
 // start the job
 startJob(jobID)
 .then((APIResponse) => { 
-console.log("\nMC Info: " + APIResponse);
+console.log("\nMC Response: " + APIResponse);
 APIResponse = JSON.parse(APIResponse);
 const runID = APIResponse["id"];
 
 // check on the status of the job every x msec
 updateJobRunStatus(runID, 5000, cleanupWhenDone);
 
+// add a synchronization job
+var jobAgentList = [];
+// we use the first 2 Agents in the agentList
+jobAgentList = appendToJobAgentList(jobAgentList, agentList[0], "rw", "Watch Folder 1", storageID);   
+jobAgentList = appendToJobAgentList(jobAgentList, agentList[1], "rw", "/tmp/Watch Folder 1");
+addJob("Test Sync Job 1", "A demo sync job", "sync", jobAgentList)
+.then((APIResponse) => { 
+console.log("\nMC Response: " + APIResponse);
+APIResponse = JSON.parse(APIResponse);
+const jobID = APIResponse["id"];
+
+// start the job
+startJob(jobID)
+.then((APIResponse) => { 
+console.log("\nMC Response: " + APIResponse);
+APIResponse = JSON.parse(APIResponse);
+const runID = APIResponse["id"];
+
+// check on the status of the job every x msec
+updateJobRunStatus(runID, 5000, cleanupWhenDone);
+
+});
+});
 });
 });
 });
