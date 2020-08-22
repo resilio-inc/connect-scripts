@@ -6,8 +6,8 @@ const { getJobProperty, setJobProperty } = require('./data-store');
 const { enumerateAgents } = require('./data-store');
 const { updateAgentList, updateJobsPerAgent, periodicAgentUpdate } = require('./agents');
 const { initializeTexting, sendMessage } = require ('./messaging');
-const { addNewStorage } = require('./storages');
-const { addJob, appendToJobAgentList } = require('./jobs');
+const { addNewStorage, deleteStorage } = require('./storages');
+const { addJob, startJob, getJobRunStatus, updateJobRunStatus, appendToJobAgentList, deleteJob } = require('./jobs');
 const { findArrayDiff } = require('./utils');
 
 function testAgentList() {
@@ -44,21 +44,66 @@ function testAgentUpdate() {
 // read/write:
 initializeMCParams("demo29.resilio.com", 8443, "6DJXHMQIR4NWJKPOGODURZQSZMMN47WYKLGISON6P3PVMK7JOKJQ");
 
+// get the MC version
 getAPIRequest("/api/v2/info")
 .then((APIResponse) => {
-    console.log("MC Info: " + APIResponse);
+console.log("MC Info: " + APIResponse);
+
+// get the list of agents
+updateAgentList()       // this populates the "data-store"   
+.then((APIResponse) => { 
+console.log("\nMC Info: " + APIResponse);
+
+// add a storage bucket
+addNewStorage("s3", "s3 storage 2", "some desc", 
+        "AKIAVOH6NAJMQMSOZINA", "tiBPNWkCw6ejaqmj/8rzBwM/+a0FuPW9XLUuefXz",
+        "ilan-test-2", "us-west-1")
+.then((APIResponse) => { 
+console.log("\nMC Info: " + APIResponse);
+APIResponse = JSON.parse(APIResponse);
+const storageID = APIResponse["id"];
+
+// enumerate the Agents
+var agentList = enumerateAgents();  // this just reads the list from the "data-store"
+
+// add a job
+var jobAgentList = [];
+// we use the first 2 Agents in the agentList
+jobAgentList = appendToJobAgentList(jobAgentList, agentList[0], "rw", "Project Files", storageID);   
+jobAgentList = appendToJobAgentList(jobAgentList, agentList[1], "ro", "/tmp/Project Files");
+addJob("test job 1", "test job", "distribution", jobAgentList)
+.then((APIResponse) => { 
+console.log("\nMC Info: " + APIResponse);
+APIResponse = JSON.parse(APIResponse);
+const jobID = APIResponse["id"];
+
+// start the job
+startJob(jobID)
+.then((APIResponse) => { 
+console.log("\nMC Info: " + APIResponse);
+APIResponse = JSON.parse(APIResponse);
+const runID = APIResponse["id"];
+
+// check on the status of the job every x msec
+updateJobRunStatus(runID, 5000, cleanupWhenDone);
+
+});
+});
+});
+});
 });
 
-//updateAgentList();
+function cleanupWhenDone(jobID) {
+    // cleanup
 
-/*
-addNewStorage("s3", "s3 storage 2", "some desc", 
-    "ABSGNHYTDR9495969784", "ABSGNHYTDR9495969784ABSGNHYTDR949596978=",
-    "bucketname", "gg-hht-9");
-*/
+    // delete the job
+    deleteJob(jobID)
+    .then((APIResponse) => { 
+    console.log("\nMC Info: " + APIResponse);
 
-var jobAgentList = [];
-jobAgentList = appendToJobAgentList(jobAgentList, 1, "rw", "/somepath");
-jobAgentList = appendToJobAgentList(jobAgentList, 150, "ro", "/somepath");
-addJob("test job 1", "test job", "distribution", jobAgentList);
-
+    // delete the storage
+    //deleteStorage(storageID)
+    //.then((APIResponse) => { 
+    //console.log("\nMC Info: " + APIResponse);
+    });
+}
