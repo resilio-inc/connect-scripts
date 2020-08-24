@@ -12,39 +12,45 @@ const { getAPIRequest } = require('./communication');
 const { findArrayDiff } = require('./utils');
 
 function updateAgentList() {
-    getAPIRequest("/api/v2/agents")
-    .then((APIResponse) => {
-        //console.log("response = " + APIResponse);
-    
-        const agentsJson = APIResponse; 
-        const agents = JSON.parse(agentsJson);
-    
-        for (let index = 0; index < agents.length; index++) {
-            const element = agents[index];
-            setAgentProperty(element.id, "name", element.name);
-            setAgentProperty(element.id, "status", element.online);
-        }
-    });
+    var updateAgentListResponse = (resolve, reject) => {
+        getAPIRequest("/api/v2/agents")
+        .then((APIResponse) => {
+            const agentsJson = APIResponse; 
+            const agents = JSON.parse(agentsJson);
+        
+            for (let index = 0; index < agents.length; index++) {
+                const element = agents[index];
+                setAgentProperty(element.id, "name", element.name);
+                setAgentProperty(element.id, "status", element.online);
+            }
+            resolve(APIResponse);
+        });
+    }
+    return new Promise(updateAgentListResponse);
 }
 
 function updateJobsPerAgent() {
-    getAPIRequest("/api/v2/jobs")
-    .then((APIResponse) => {
-        
-        const jobs = JSON.parse(APIResponse);
+    var updateJobsPerAgentResponse = (resolve, reject) => {
+        getAPIRequest("/api/v2/jobs")
+        .then((APIResponse) => {
+            
+            const jobs = JSON.parse(APIResponse);
 
-        for(var i = 0; i < jobs.length; i++) {
-            const element = jobs[i];
-            const agentArray = [];
+            for(var i = 0; i < jobs.length; i++) {
+                const element = jobs[i];
+                const agentArray = [];
 
-            for(var x = 0; x < jobs[i]["agents"].length; x++){ 
-              const element2 = jobs[i].agents[x];
-              agentArray.push(element2.id);
+                for(var x = 0; x < jobs[i]["agents"].length; x++){ 
+                const element2 = jobs[i].agents[x];
+                agentArray.push(element2.id);
+                }
+
+                setJobProperty(element.id, "agents", agentArray);
             }
-
-            setJobProperty(element.id, "agents", agentArray);
-        }
-    });
+            resolve(APIResponse);
+        });
+    }
+    return new Promise(updateJobsPerAgentResponse);
 }
 
 class updateListofAgents {
