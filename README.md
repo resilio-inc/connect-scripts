@@ -26,7 +26,7 @@ This script allows to start process (`-AppPath`) with arguments (`-AppCmd`) unde
 
 ## api_sample1.ps1
 This is an example PowerShell script that uses the Resilio Connect API. 
-Given a name of an agent (can be masked with wildcards) it checks the Agent status in all active Job Runs.
+Given a name of an Agent (can be masked with wildcards) it checks the Agent status in all active Job Runs.
 
 ## deploy_agent_mac.sh
 This script allows to register agent of Mac as a LaunchDaemon and run under limited user accout. 
