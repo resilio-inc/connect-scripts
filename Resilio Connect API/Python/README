@@ -1,0 +1,18 @@
+This is some Python sample code that uses the Resilio Connect API to create a Distribution Job.  When the Job is "finished" it calls another function.
+
+A few important notes:
+- app.py is the main application file and it calls the other modules
+- The address of the the Management Console and the Authentication Token are stored in environment variables
+- These are read by this line in app.py 
+    initializeMCParams(os.getenv('RESILIO_MC_URL'), 8443, os.getenv('RESILIO_AUTH_TOKEN'))
+- For simplicity, the code adds the first two Agents in the list to the Job
+- To re-run the code, the Job needs to be deleted first. The system won't create two jobs with the same parameters.
+
+Here is a high-level description of the flow:
+- Gets a list of Agents
+- Creates a list of Agents for the Job by picking the first 2 agents on the list
+- Creates a new Distribution Job
+- Starts the Job and retrieves the Run ID
+- Uses the Run ID to check on the status of the Job Run
+- Calls a specified callback function after the Job is "finished"
+

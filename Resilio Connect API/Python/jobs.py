@@ -64,6 +64,7 @@ def monitorJob(runID, finishedCallbackFunction, monitorInterval):
         jobRuns[runID] = jobMonitor(runID, finishedCallbackFunction)
 
     while ((jobRuns[runID].getJobStatus() != "finished") and (jobRuns[runID].getErrCode != 404)):
+        # this should become multi-threaded to monitor several jobs
         time.sleep(monitorInterval)
         jobRuns[runID].updateJobRunStatus()
     # remove from the jobRuns dict
