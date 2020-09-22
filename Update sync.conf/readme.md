@@ -20,9 +20,16 @@ This XML spawned automatically into a target folder by script if agent restart i
 ## upgrade-post-download.cmd.copy_to_trigger
 This file contains cmd script which needs to be placed to post-download trigger of the update job. Please note that you need to specify necessary parameterys yourself before firing the job
 
-## update-syncconf.py
+
+## update_syncconf_detached.app
+Automator application for restarting Agent after replacing sync.conf.
+New sync.conf should be placed in the same folder on the source beside update_syncconf_detached.app. 
+Do not forget to copy scripts for update_syncconf_detached.app from upgrade-post-download.cmd.copy_to_trigger.
+
+## update-syncconf.py (not working since MacOS 10.15)
 Script for Mac OS.
 Do the same things as update-syncconf.ps1, excepting agent restart
+
 
 ```
 $ ./update-syncconf.py --help
