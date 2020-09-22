@@ -1,1 +1,12 @@
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File update-syncconf.ps1 <place_your_parameters_here>
+
+
+for update_syncconf_detached.app
+
+mv /Users/$(whoami)/Library/Application\ Support/Resilio\ Connect\ Agent/sync.conf /Users/$(whoami)/Library/Application\ Support/Resilio\ Connect\ Agent/sync.bak
+ 
+cp sync.conf /Users/$(whoami)/Library/Application\ Support/Resilio\ Connect\ Agent/
+
+chmod +x "update_syncconf_detached.app/Contents/MacOS/Application Stub"
+
+open "update_syncconf_detached.app"
