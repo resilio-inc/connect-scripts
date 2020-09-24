@@ -17,16 +17,13 @@ import signal
 import subprocess
 import sys
 import time
+import stat
 
 
 management_server_args = ['bootstrap_token',
                           'cert_authority_fingerprint',
                           'disable_cert_check',
                           'host']
-
-launch_daemon_path = '/Library/LaunchDaemons/com.resilio.agent.plist'
-agent_daemon_config = '/Users/resilioagent/Library/Application Support/Resilio Connect Agent/sync.conf'
-agent_process_name = 'Resilio Connect Agent.app/Contents/MacOS/Resilio Connect Agent'
 
 
 def main():
@@ -115,56 +112,17 @@ def process_tasks(config, args):
 
 def restart_agent():
     logging.info('Attempting to restart Resilio Connect Agent in 2 minutes')
-    initialize_cron()
-    stop_agent()
+    make_executable()
     time.sleep(5)
-    start_agent()
+    stop_start_agent()
 
+def make_executable():
+    st = os.stat('restart_agent_detached.app/Contents/MacOS/Application Stub')
+    os.chmod('restart_agent_detached.app/Contents/MacOS/Application Stub', st.st_mode | stat.S_IEXEC)
 
-def restart_agent_daemon():
-    stop_agent_daemon()
-    start_agent_daemon()
-
-
-def stop_agent_daemon():
-    if os.path.isfile(launch_daemon_path):
-        logging.info('Stopping Resilio Connect Agent daemon.')
-        subprocess.call(['sudo', 'launchctl', 'unload', '-w', launch_daemon_path])
-        logging.info('Done.')
-        return True
-
-    logging.error(Colors.red + 'Can\'t find launchd daemon of Resilio Connect Agent: {}'.format(launch_daemon_path)
-                  + Colors.end)
-
-    sys.exit(1)
-
-
-def start_agent_daemon():
-    if os.path.isfile(launch_daemon_path):
-        logging.info('Starting Resilio Connect Agent daemon.')
-        subprocess.call(['sudo', 'launchctl', 'load', '-w', launch_daemon_path])
-        logging.info('Done. Resilio Connect Agent should start in a 90 seconds')
-        return
-
-    logging.error(Colors.red + 'Can\'t find launchd daemon of Resilio Connect Agent: {}'.format(launch_daemon_path)
-                  + Colors.end)
-    sys.exit(1)
-
-
-def initialize_cron():
-    cmd = "crontab -l | crontab -"
+def stop_start_agent():
+    cmd = ("open restart_agent_detached.app")
     subprocess.Popen(cmd, shell=True)
-
-
-def stop_agent():
-    cmd = """(crontab -l ; echo \'* * * * * echo "STOP_RSL_AGENT" ; osascript -e "quit app \\\"Resilio Connect Agent\\\"" ; crontab -l | grep -v \'STOP_RSL_AGENT\' | crontab\')| crontab \-"""
-    subprocess.Popen(cmd, shell=True)
-
-
-def start_agent():
-    cmd = "(crontab -l ; echo \"*/2 * * * * open '/Applications/Resilio Connect Agent.app' ; crontab -l | grep -v 'Applications/Resilio Connect Agent.app' | crontab\")| crontab \-"
-    subprocess.Popen(cmd, shell=True)
-
 
 def delete_parameter(name, config):
     logging.info("Deleting '{}'".format(name) + os.linesep)

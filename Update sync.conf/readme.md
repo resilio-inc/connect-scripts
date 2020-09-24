@@ -23,12 +23,10 @@ This file contains cmd script which needs to be placed to post-download trigger 
 
 ## restart_agent_detached.app
 Automator application for restarting Agent after replacing sync.conf.
-New sync.conf should be placed in the same folder on the source beside update_syncconf_detached.app. 
-Do not forget to copy scripts for update_syncconf_detached.app from upgrade-post-download.cmd.copy_to_trigger.
 
-## update-syncconf.py (not working since MacOS 10.15)
+## update-syncconf.py 
 Script for Mac OS.
-Do the same things as update-syncconf.ps1, excepting agent restart
+Do the same things as update-syncconf.ps1.
 
 
 ```

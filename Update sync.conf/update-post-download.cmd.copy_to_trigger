@@ -1,14 +1,3 @@
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File update-syncconf.ps1 <place_your_parameters_here>
 
 
-for restart_agent_detached.app
-
-mv /Users/$(whoami)/Library/Application\ Support/Resilio\ Connect\ Agent/sync.conf /Users/$(whoami)/Library/Application\ Support/Resilio\ Connect\ Agent/sync.bak
- 
-cp sync.conf /Users/$(whoami)/Library/Application\ Support/Resilio\ Connect\ Agent/
-
-xattr -d com.apple.quarantine "restart_agent_detached.app"
-
-chmod +x "restart_agent_detached.app/Contents/MacOS/Application Stub"
-
-open "restart_agent_detached.app"
