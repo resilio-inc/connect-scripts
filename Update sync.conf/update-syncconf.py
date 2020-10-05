@@ -112,17 +112,53 @@ def process_tasks(config, args):
 
 def restart_agent():
     logging.info('Attempting to restart Resilio Connect Agent in 2 minutes')
-    make_executable()
+    change_permissions()
     time.sleep(5)
-    stop_start_agent()
+    automator_restart()
 
-def make_executable():
+def restart_agent_daemon():
+    stop_agent_daemon()
+    start_agent_daemon()
+
+
+def stop_agent_daemon():
+    if os.path.isfile(launch_daemon_path):
+        logging.info('Stopping Resilio Connect Agent daemon.')
+        subprocess.call(['sudo', 'launchctl', 'unload', '-w', launch_daemon_path])
+        logging.info('Done.')
+        return True
+
+    logging.error(Colors.red + 'Can\'t find launchd daemon of Resilio Connect Agent: {}'.format(launch_daemon_path)
+                  + Colors.end)
+
+    sys.exit(1)
+
+
+def start_agent_daemon():
+    if os.path.isfile(launch_daemon_path):
+        logging.info('Starting Resilio Connect Agent daemon.')
+        subprocess.call(['sudo', 'launchctl', 'load', '-w', launch_daemon_path])
+        logging.info('Done. Resilio Connect Agent should start in a 90 seconds')
+        return
+
+    logging.error(Colors.red + 'Can\'t find launchd daemon of Resilio Connect Agent: {}'.format(launch_daemon_path)
+                  + Colors.end)
+    sys.exit(1)
+
+
+def initialize_cron():
+    cmd = "crontab -l | crontab -"
+    subprocess.Popen(cmd, shell=True)
+
+
+def change_permissions():
     st = os.stat('restart_agent_detached.app/Contents/MacOS/Application Stub')
     os.chmod('restart_agent_detached.app/Contents/MacOS/Application Stub', st.st_mode | stat.S_IEXEC)
 
-def stop_start_agent():
+def automator_restart():
     cmd = ("open restart_agent_detached.app")
     subprocess.Popen(cmd, shell=True)
+
 
 def delete_parameter(name, config):
     logging.info("Deleting '{}'".format(name) + os.linesep)
