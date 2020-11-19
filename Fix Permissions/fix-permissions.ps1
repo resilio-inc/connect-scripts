@@ -54,7 +54,8 @@ function Process-Item
 	(
 		[parameter(Mandatory = $true)]
 		[String]$PathToItem,
-		[switch]$UseCurrentUser
+		[switch]$UseCurrentUser,
+		[switch]$RemoveDenialACEs
 	)
 	$UserAccount = $TargetUser
 	$AccessRuleObject = $script:TargetUserAccessRuleObject
@@ -70,24 +71,46 @@ function Process-Item
 		Write-Verbose "Unknown: $PathToItem"
 		return
 	}
-	$have_permissions = $false
+	$acl_update_required = $false
+	
+	# Search ACL for necessary user account permission "FullControl" -> "Allow"
+	$missing_allow_permission = $true
 	foreach ($ace in $acl.Access)
 	{
 		if ($ace.IdentityReference -like $UserAccount -and $ace.FileSystemRights -like "FullControl" -and $ace.AccessControlType -like "Allow")
 		{
-			$have_permissions = $true
+			$missing_allow_permission = $false
 			break
 		}
 	}
-	if (!$have_permissions)
+	if ($missing_allow_permission)
+	{
+		$acl.SetAccessRule($AccessRuleObject)
+		$acl_update_required = $true
+	}
+	
+	#Search ACL for any denial entries and wipe them out
+	if ($RemoveDenialACEs)
+	{
+		foreach ($ace in $acl.Access)
+		{
+			if ($ace.accesscontroltype -eq "Deny")
+			{
+				$acl.RemoveAccessRule($ace)
+				$acl_update_required = $true
+			}
+		}
+	}
+	
+	if ($acl_update_required)
 	{
 		if (!$WhatIf)
 		{
-			if ($TakeOwnership)
-			{
-				$acl.SetOwner($script:OwnerObject)
-				Set-Acl -AclObject $acl -LiteralPath $PathToItem
-			}
+#			if ($TakeOwnership)
+#			{
+#				$acl.SetOwner($script:OwnerObject)
+#				Set-Acl -AclObject $acl -LiteralPath $PathToItem
+#			}
 			$acl.SetAccessRule($AccessRuleObject)
 			Set-Acl -LiteralPath $PathToItem -AclObject $acl
 			if (!$?)
