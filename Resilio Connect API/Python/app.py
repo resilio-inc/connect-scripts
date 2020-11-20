@@ -30,7 +30,7 @@ print(jobAgentList)
 newJob = addJob("Test Distribution Job 1", "A demo distribution job", "distribution", jobAgentList)
 print(newJob)
 
-# start the new job (only needed for distribution jobs)
+# start the new job (only needed for scheduled jobs; not needed for Sync Jobs)
 newRun = startJob(newJob['id'])
 print(newRun)
 
