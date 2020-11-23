@@ -6,10 +6,11 @@ that have no such permission for selected user account
 .DESCRIPTION
 The script is intended to "fix" permissions of the files and folders inside designated directory that has their inheritence
 flag disabled and are not allowed to be accessed by LOCAL SYSTEM user. The script will traverse target directory recursively
-and add permission entry for FullControl for LOCAL SYSTEM user. Optionally, it can take the ownership of the file first
-(this might be necessary sometimes as non-owner in AD environment might not have enough permissions to set permissions).
-All successful / unsuccessful permissions attempts are logged in verbose stream, so use -Verbose 4>permisions_fix.log
-argument to log per-item results into a log file.
+and add permission entry for FullControl for target user (LOCAL SYSTEM by default). Also, it will add an explicit "Allow all"
+ACE for the user running the script if it is unable to traverse a directory. Optionally, it can take the ownership temporaryly 
+of the file/folder if permission assignment fails (this might be necessary sometimes as non-owner in AD environment might not 
+have enough permissions to set permissions). All successful / unsuccessful permissions attempts are logged in verbose stream, 
+so use -Verbose 4>permisions_fix.log argument to log per-item results into a log file.
 The attempt to take ownership is always done to a user running script and it's advised to run it as a domain admin which is
 also a local admin.
 
@@ -20,18 +21,27 @@ Specify to point the directory to be inspected for missing permissions.
 Specify approximate amount of files for correct progress bar behavior
 
 .PARAMETER WhatIf
-Specify to only show which files are going to be updated and don't do actual changes to filesystem
+Specify to only show which files are going to be updated and don't do actual changes to filesystem. Note that this parameter
+prohibits all the changes and therefore script may fail to traverse all directories as sometimes it needs to add a permission
+for a running user to traverse the directory
 
 .PARAMETER TakeOwnership
-Specify to force script to take ownership of the object before adding permission entry. Could be useful in some cases 
+Specify to allow script to take ownership temporarily if it fails to assign allowing ACE. Could be useful in some cases 
 when non-owner cannot adjust object permissions. Domain admins can ALWAYS take ownership of the object.
 
 .PARAMETER SupportLongPath
 Specify to allow script working with paths longer than 260 symbols. Requires powershell 5.1 and newer! Won't work on PS4.
 
+.PARAMETER TargetUser
+Specify to set the target user that will receive ALLOW FULLCONTROL permissions. "LOCAL SYSTEM" is the default value.
+
 .EXAMPLE
 .\fix-permissions.ps1 -Path C:\TestFolders\ -TakeOwnership -Verbose 4>log.txt
-will run the scrip to process C:\TestFolders and all its children recursively adding SYSTEM:FullControl permission to all items, assigning current user as an owner and dumping successful/unsuccesful attempts into file log.txt
+will run the scrip to process C:\TestFolders and all its children recursively adding SYSTEM:FullControl permission to all items, assigning current user as an owner if necessary and dumping successful/unsuccesful attempts into file log.txt
+
+.NOTES
+The script behaves as non-invasive as it is possible. If target folder/file has necessary permissions for the target user AND
+has enough permissions for the user running script to traverse further - script does not change anything.
 #>
 
 [CmdletBinding()]
@@ -96,7 +106,7 @@ function Process-Item
 		{
 			if ($ace.accesscontroltype -eq "Deny")
 			{
-				$acl.RemoveAccessRule($ace)
+				$acl.RemoveAccessRule($ace) | Out-Null
 				$acl_update_required = $true
 			}
 		}
@@ -106,26 +116,40 @@ function Process-Item
 	{
 		if (!$WhatIf)
 		{
-#			if ($TakeOwnership)
-#			{
-#				$acl.SetOwner($script:OwnerObject)
-#				Set-Acl -AclObject $acl -LiteralPath $PathToItem
-#			}
+			$update_success = $false
 			$acl.SetAccessRule($AccessRuleObject)
 			Set-Acl -LiteralPath $PathToItem -AclObject $acl
 			if (!$?)
 			{
-				$script:UnsuccesfulUpdates++
-				Write-Verbose "Failed: `"$PathToItem`""
+				if ($TakeOwnership)
+				{
+					Write-Verbose "Attempting to take ownership for `"$PathToItem`""
+					$tmp_acl = Get-Acl -LiteralPath $PathToItem
+					$OldOwner = $tmp_acl.Owner.Split('\')
+					$OldOwnerObject = New-Object System.Security.Principal.NTAccount($OldOwner[0], $OldOwner[1])
+					$tmp_acl.SetOwner($script:OwnerObject)
+					Set-Acl -AclObject $tmp_acl -LiteralPath $PathToItem		# Apply new owner
+					Set-Acl -LiteralPath $PathToItem -AclObject $acl 			# Apply new acl
+					$tmp_acl = Get-Acl -LiteralPath $PathToItem
+					$tmp_acl.SetOwner($OldOwnerObject)
+					Set-Acl -AclObject $tmp_acl -LiteralPath $PathToItem 		# Return back old owner
+					if ($?) {$update_success = $true}
+				}
+			}
+			else { $update_success = $true }
+			if ($update_success)
+			{
+				Write-Verbose "Succeed ($UserAccount): `"$PathToItem`""
 			}
 			else
 			{
-				Write-Verbose "Succeed: `"$PathToItem`""
+				$script:UnsuccesfulUpdates++
+				Write-Verbose "Failed ($UserAccount): `"$PathToItem`""
 			}
 		}
 		else
 		{
-			Write-Verbose "Will update: `"$PathToItem`""
+			Write-Verbose "Will update ($UserAccount): `"$PathToItem`""
 		}
 		$Script:ItemsUpdated++
 	}
@@ -139,17 +163,18 @@ function Traverse-Directory
 		[parameter(Mandatory = $true)]
 		[String]$PathToProcess
 	)
-	$FilesList = Get-ChildItem -LiteralPath $PathToProcess -Force -Attributes !Directory
+	$FilesList = Get-ChildItem -LiteralPath $PathToProcess -Force -Attributes !Directory -ErrorAction SilentlyContinue
 	if (!$?)
 	{
+		Write-Verbose "Fixing perms too traverse directory `"$PathToProcess`""
 		if ($Error.CategoryInfo.Category -eq "PermissionDenied")
 		{
-			Process-Item $PathToProcess -UseCurrentUser
+			Process-Item $PathToProcess -UseCurrentUser -RemoveDenialACEs
 			$FilesList = Get-ChildItem -LiteralPath $PathToProcess -Force -Attributes !Directory
 		}
 		else
 		{
-			Write-Error "Failed to GCI: $PathToProcess"
+			Write-Error "Failed to GCI: $PathToProcess ($($Error[0].ToString()))"
 			exit
 		}
 	}
