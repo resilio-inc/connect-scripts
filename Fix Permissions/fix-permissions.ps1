@@ -163,10 +163,10 @@ function Traverse-Directory
 		[parameter(Mandatory = $true)]
 		[String]$PathToProcess
 	)
+	Write-Host "Processing directory `"$PathToProcess`""
 	$FilesList = Get-ChildItem -LiteralPath $PathToProcess -Force -Attributes !Directory -ErrorAction SilentlyContinue
 	if (!$?)
 	{
-		Write-Verbose "Fixing perms too traverse directory `"$PathToProcess`""
 		if ($Error.CategoryInfo.Category -eq "PermissionDenied")
 		{
 			Process-Item $PathToProcess -UseCurrentUser -RemoveDenialACEs
@@ -174,7 +174,8 @@ function Traverse-Directory
 		}
 		else
 		{
-			Write-Error "Failed to GCI: $PathToProcess ($($Error[0].ToString()))"
+			Write-Error "Failed to list directory: $PathToProcess ($($Error[0].ToString()))"
+			Write-Verbose "Failed to list directory: $PathToProcess ($($Error[0].ToString()))"
 			exit
 		}
 	}
@@ -199,6 +200,7 @@ function Traverse-Directory
 }
 # ----------------------------------------------------------------------------------------------------------------------------------------
 
+Write-Host "Script started, will fix permissions for `"$Path`""
 $FileCounter = 0
 $DirCounter = 0
 $ItemsUpdated = 0
@@ -208,6 +210,15 @@ $CurrentUser = "$env:USERDOMAIN\$env:USERNAME"
 $TargetUserAccessRuleObject = New-Object System.Security.AccessControl.FileSystemAccessRule($TargetUser, "FullControl", "Allow")
 $CurrentUserAccessRuleObject = New-Object System.Security.AccessControl.FileSystemAccessRule($CurrentUser, "FullControl", "Allow")
 if ($SupportLongPath) { $Path = "\\?\$Path" }
+
+Write-Host "Checking for elevated privileges..."
+$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+if (!$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
+{
+	throw "Script is not running with elevated privileges, exiting. Run your powershell `"As administrator`""
+}
+Write-Host "[OK]"
+Write-Host "Traversing directories recursively..."
 Traverse-Directory -PathToProcess $Path
 Write-Progress -Activity "Traversing directories recursively" -Completed
-Write-Host "Processed total $FileCounter files, $DirCounter dirs. Updated items $($ItemsUpdated-$UnsuccesfulUpdates)/$UnsuccesfulUpdates (success/unsuccess)"
+Write-Host "Processed total $FileCounter files, $DirCounter dirs. Updated items $($ItemsUpdated - $UnsuccesfulUpdates)/$UnsuccesfulUpdates (success/unsuccess)"
