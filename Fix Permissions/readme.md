@@ -13,3 +13,6 @@ The script goes over directories tree recursively, assigning "Allow FullControl"
 * Run script under domain admin user account
 * Use "-TakeOwnership" switch to deal with extra-prohibited entries. Script will take the ownership temporarily (assign domain admin as the owner) and only then try to insert LOCAL SYSTEM full access entry.
 * Set the "-FilesAmountExpected" to approximate amount of files for more precise progress bar behavior
+Sample script start:
+
+```.\fix-permissions.ps1 -Path C:\TestFolders\TestPerms\ -SupportLongPath -FilesAmountExpected 20000000 -Verbose 4> c:\temp\perms.log```
