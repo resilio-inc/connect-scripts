@@ -2,6 +2,7 @@
 
 xattr -rc /Applications/Resilio\ Connect\ Agent.app
 
+mkdir /Users/$USER/Library/LaunchAgents
 launchd_plist=/Users/$USER/Library/LaunchAgents/com.resilio.agent.plist
 storage=/Users/$USER/Library/Application\ Support/Resilio\ Connect\ Agent
 
@@ -34,5 +35,7 @@ EOL
 chown -R $USER:staff $launchd_plist
 
 sudo -u $USER launchctl load -w $launchd_plist
+
+exit 0
 
 #sudo -u $USER /Applications/Resilio\ Connect\ Agent.app/Contents/MacOS/Resilio\ Connect\ Agent &
