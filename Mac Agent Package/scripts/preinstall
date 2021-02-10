@@ -4,3 +4,5 @@ mkdir -p ~/Library/Application\ Support/Resilio\ Connect\ Agent
 cp sync.conf ~/Library/Application\ Support/Resilio\ Connect\ Agent/
 
 chown -R $USER:staff ~/Library/Application\ Support/Resilio\ Connect\ Agent/
+
+exit 0
