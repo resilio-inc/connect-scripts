@@ -10,6 +10,7 @@ This folder contains a script intended to scan the folder you synced or plan to 
 
 ## Script usage
 ```.\scan-directory.ps1 -Path F:\MyFolder -OutPath C:\Support -SupportLongPath```
+
 Scans the F:\MyFolder for files that will be synced and that will be ignored. Will respect long paths and save the results in
 C:\Support\MyFolder-synced.txt
 C:\Support\MyFolder-dot-sync.txt  
@@ -18,4 +19,5 @@ C:\Support\MyFolder-perms.txt
 respectively. See the outputs help section for details of each file.
 
 ```.\scan-directory.ps1 -FileListA C:\Support\MyFolder-synced.txt -FileListB "\\myserver\c$\Support\MyFolder-synced.txt"```
+
 Compares 2 scans on 2 different computer and profives a difference, i.e. files that were not synced for some reason.
