@@ -254,8 +254,8 @@ if ($PSCmdlet.ParameterSetName -eq "Scan")
 	Write-Host "Entries to be ignored: $($IgnoreCounter[1] + $IgnoreCounter[2] + $IgnoreCounter[3] + $IgnoreCounter[4]), size $($IgnoreCounterSize[1] + $IgnoreCounterSize[2] + $IgnoreCounterSize[3] + $IgnoreCounterSize[4])"
 	Write-Host "Ignored due to staying in .sync folder: $($IgnoreCounter[2]), size: $($IgnoreCounterSize[2])"
 	Write-Host "Ignored due to default IgnoreList: $($IgnoreCounter[3]), size: $($IgnoreCounterSize[3])"
-	Write-Host "Ignored due to inability to open*: $($IgnoreCounter[3]), size: $($IgnoreCounterSize[3])"
-	Write-Host " * Likely due to insufficient permissions. Note, that there could be more files, actually as script was unable to list all files"
+	Write-Host "Ignored due to inability to open*: $($IgnoreCounter[4])"
+	Write-Host " * Likely due to insufficient permissions. Note, that there could be more files/folders, actually as script was unable to list all files"
 }
 
 if ($PSCmdlet.ParameterSetName -eq "Compare")
