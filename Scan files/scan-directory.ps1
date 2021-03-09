@@ -22,7 +22,7 @@ Specify the folder for scan results. Scan results are several text files with th
 .PARAMETER SupportLongPath
 Specify to allow script working with paths longer than 260 symbols. Requires powershell 5.1 and newer! Won't work on PS4.
 
-.PARAMETER FileListA
+.PARAMETER FilesListA
 Specify the output text file provided in SCAN to compare if your folders match and to see what is the difference.
 
 .PARAMETER FilesListB
@@ -47,7 +47,7 @@ C:\Support\MyFolder-perms.txt
 respectively. See the outputs help section for details of each file.
 
 .EXAMPLE
-.\scan-directory.ps1 -FileListA C:\Support\MyFolder-synced.txt -FileListB "\\myserver\c$\Support\MyFolder-synced.txt"
+.\scan-directory.ps1 -FilesListA C:\Support\MyFolder-synced.txt -FilesListB "\\myserver\c$\Support\MyFolder-synced.txt"
 Compares 2 scans on 2 different computer and profives a difference, i.e. files that were not synced for some reason.
 #>
 [CmdletBinding()]
@@ -226,6 +226,11 @@ $ignorelist = @('$RECYCLE.BIN',
 
 if ($PSCmdlet.ParameterSetName -eq "Scan")
 {
+	if (!(Test-Path $OutPath))
+	{
+		Write-Error "Output path does not exist"
+		exit 2
+	}
 	Write-Host "Scanning folder"
 	$ScanFolderName = $Path | Split-Path -Leaf
 	$Path = $Path.Trim('\') + "\"

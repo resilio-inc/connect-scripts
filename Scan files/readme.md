@@ -18,6 +18,6 @@ C:\Support\MyFolder-ignored.txt
 C:\Support\MyFolder-perms.txt     
 respectively. See the outputs help section for details of each file.
 
-```.\scan-directory.ps1 -FileListA C:\Support\MyFolder-synced.txt -FileListB "\\myserver\c$\Support\MyFolder-synced.txt"```
+```.\scan-directory.ps1 -FilesListA C:\Support\MyFolder-synced.txt -FilesListB "\\myserver\c$\Support\MyFolder-synced.txt"```
 
 Compares 2 scans on 2 different computer and profives a difference, i.e. files that were not synced for some reason.
