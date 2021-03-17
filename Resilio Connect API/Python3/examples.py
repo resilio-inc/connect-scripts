@@ -154,7 +154,8 @@ class ConnectApiExample(ApiBaseCommands):
                 'id': <group_id>,
                 'path': {
                     'linux': '/path/on/linux',
-                    'win': 'c:\path\on\windows'
+                    'win': 'c:\path\on\windows',
+                    'osx': '/tmp/test'
                 },
                 'permission': <group_permissions>
             }
@@ -220,7 +221,8 @@ class ConnectApiExample(ApiBaseCommands):
             "permission": <job_permissions>,
             "path": {
                 "linux": "/path/on/linux",
-                "win": "c:\path\on\windows"
+                "win": "c:\path\on\windows",
+                'osx': "/tmp/test"
             }
         }
         :return: True if operation was successful, otherwise False
@@ -250,7 +252,8 @@ class ConnectApiExample(ApiBaseCommands):
             'id': <group_id>,
             'path': {
                 'linux': '/path/on/linux',
-                'win': 'c:\path\on\windows'
+                'win': 'c:\path\on\windows',
+                'osx': "/tmp/test"
             },
             'permission': <group_permissions>  # "ro", "rw", "sro", "srw"
         }
@@ -259,7 +262,8 @@ class ConnectApiExample(ApiBaseCommands):
             'id': <group_id>,
             'path': {
                 'linux': '/path/on/linux',
-                'win': 'c:\path\on\windows'
+                'win': 'c:\path\on\windows',
+                'osx': '/tmp/test'
             },
             'permission': <group_permissions>  # "ro", "rw", "sro", "srw"
         }
