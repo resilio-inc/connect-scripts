@@ -231,7 +231,7 @@ if ($PSCmdlet.ParameterSetName -eq "Scan")
 		Write-Error "Output path does not exist"
 		exit 2
 	}
-	Write-Host "Scanning folder"
+	Write-Host "Scanning folder `"$Path`""
 	$ScanFolderName = $Path | Split-Path -Leaf
 	$Path = $Path.Trim('\') + "\"
 	if ($SupportLongPath) { $Path = "\\?\$Path" }
