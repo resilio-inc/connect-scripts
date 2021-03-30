@@ -235,6 +235,7 @@ if ($PSCmdlet.ParameterSetName -eq "Scan")
 	$ScanFolderName = $Path | Split-Path -Leaf
 	$Path = $Path.Trim('\') + "\"
 	if ($SupportLongPath) { $Path = "\\?\$Path" }
+	$OwnHostName = hostname
 	$PathLen = $Path.Length
 	$StreamWriter = @()
 	
@@ -242,7 +243,7 @@ if ($PSCmdlet.ParameterSetName -eq "Scan")
 	{
 		for ($i = 0; $i -lt 5; $i++)
 		{
-			$StreamWriter += new-object system.IO.StreamWriter($OutPath + "\$ScanFolderName-$($IgnoreNames[$i]).txt")
+			$StreamWriter += new-object system.IO.StreamWriter($OutPath + "\$OwnHostName-$ScanFolderName-$($IgnoreNames[$i]).txt")
 		}
 		Traverse-Directory -PathToProcess $Path
 	}
