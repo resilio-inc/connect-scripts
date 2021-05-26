@@ -641,12 +641,20 @@ function Invoke-ConnectFunction
 		if ($PSVersionTable.PSVersion -lt "6.0")
 		{
 			if (!$JSON) { $response = Invoke-RestMethod -Method $Method -uri "$base_url/$RestPath" -Headers @{ "Authorization" = "Token $API_token" } -ContentType "Application/json" }
-			else { $response = Invoke-RestMethod -Method $Method -uri "$base_url/$RestPath" -Headers @{ "Authorization" = "Token $API_token" } -ContentType "Application/json" -Body:$JSON }
+			else
+			{
+				$response = Invoke-RestMethod -Method $Method -uri "$base_url/$RestPath" -Headers @{ "Authorization" = "Token $API_token" } -ContentType "Application/json" -Body:$JSON
+				Write-Debug "Sending JSON: $JSON"
+			}
 		}
 		else
 		{
 			if (!$JSON) { $response = Invoke-RestMethod -Method $Method -uri "$base_url/$RestPath" -Headers @{ "Authorization" = "Token $API_token" } -ContentType "Application/json" -SkipCertificateCheck }
-			else { $response = Invoke-RestMethod -Method $Method -uri "$base_url/$RestPath" -Headers @{ "Authorization" = "Token $API_token" } -ContentType "Application/json" -Body:$JSON -SkipCertificateCheck }
+			else
+			{
+				$response = Invoke-RestMethod -Method $Method -uri "$base_url/$RestPath" -Headers @{ "Authorization" = "Token $API_token" } -ContentType "Application/json" -Body:$JSON -SkipCertificateCheck
+				Write-Debug "Sending JSON: $JSON"
+			}
 		}
 	}
 	catch [System.Net.WebException]
@@ -1562,6 +1570,7 @@ function Get-Notifications
 	return Invoke-ConnectFunction -Method GET -RestPath "notifications"
 }
 #-----------------------------------------------------------------------------------------------------------------------------------------------------
+
 function New-Notification
 {
 	<#
@@ -1587,19 +1596,14 @@ function New-Notification
 	New-Notification -Type job_notification -SubscriberEmails "test@resilio.com" -Trigger JOB_RUN_FINISHED -DontSendIfNoDataTransfered
 	Subscribes "test@resilio.com" to all jobs finish event. Won't send a notification if no data was transferred
 	.EXAMPLE 
-	*** THIS ONE FAILS - CHECK WITH SERVER TEAM
 	New-Notification -Type job_notification -SubscriberEmails "test@resilio.com" -Trigger JOB_RUN_ERROR -ErrorNotResolvedAfter 3600
 	Notify for any job, any error, if not resolved after 1 hour
 	.EXAMPLE
 	New-Notification -Type job_notification -SubscriberEmails "test@resilio.com" -Trigger JOB_RUN_NOT_COMPLETE -JobNotCompleteAfter 3600
 	Notify "test@resilio.com" if any job does not finish within 1 hour
 	.EXAMPLE
-	*** THIS ONE FAILS, TOO
 	New-Notification -Type job_notification -SubscriberEmails "test@resilio.com" -Trigger JOB_RUN_FAILED -JobID 122
 	Notify if job with ID 122 finished with errors.
-	.EXAMPLE
-	Find-ConnectJobs -JobName "Test*" | New-Notification -Type job_notification -SubscriberEmails "test@resilio.com" -Trigger JOB_RUN_FINISHED
-	Gets all the jobs with the name starting with "Test" and adds notification for each.
 	.LINK
 	https://www.resilio.com/api/connect/documentation/#api-Notifications-CreateNotification
 	.LINK
@@ -1628,6 +1632,8 @@ function New-Notification
 		$SubscriberUsers,
 		[Parameter(ValueFromPipeline = $true)]
 		[Parameter(ParameterSetName = "JobNotification")]
+		[Parameter(ParameterSetName = "EventNotification")]
+		[Parameter(ParameterSetName = "OverviewNotification")]
 		[int]$JobID,
 		[ValidateSet("JOB_RUN_FINISHED", "JOB_RUN_FAILED", "JOB_RUN_NOT_COMPLETE", "JOB_RUN_ERROR")]
 		[Parameter(ParameterSetName = "JobNotification")]
@@ -1669,10 +1675,18 @@ function New-Notification
 			
 			$settings = New-Object System.Object
 			$used_settings = $false
+			if ($Trigger -eq "JOB_RUN_FAILED")
+			{
+				#$settings | Add-Member -NotePropertyName "error_code" -NotePropertyValue $null
+				$used_settings = $true
+			}
 			if ($Trigger -eq "JOB_RUN_ERROR")
 			{
 				if ($ErrorCode) { $settings | Add-Member -NotePropertyName "error_code" -NotePropertyValue $ErrorCode }
 				else { $settings | Add-Member -NotePropertyName "error_code" -NotePropertyValue $null }
+				if ($NotifyOnErrorRemove) { $settings | Add-Member -NotePropertyName "notify_on_error_remove" -NotePropertyValue $true }
+				else { $settings | Add-Member -NotePropertyName "notify_on_error_remove" -NotePropertyValue $false }
+				$used_settings = $true
 			}
 			if ($NotifyOnErrorRemove) { $settings | Add-Member -NotePropertyName "notify_on_error_remove" -NotePropertyValue $true }
 			if ($ErrorNotResolvedAfter)
