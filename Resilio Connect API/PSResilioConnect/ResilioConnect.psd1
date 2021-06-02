@@ -19,7 +19,7 @@
 	RootModule = 'ResilioConnect.psm1'
 	
 	# Version number of this module.
-	ModuleVersion = '2.11.7.1'
+	ModuleVersion = '2.12.4.2'
 	
 	# ID used to uniquely identify this module
 	GUID = '295f76f4-3447-4b77-9571-780625279be6'
@@ -28,7 +28,7 @@
 	Author = 'Roman Zanin'
 	
 	# Company or vendor of this module
-	# CompanyName = ''
+	CompanyName = 'Resilio, Inc.'
 	
 	# Copyright statement for this module
 	# Copyright = ''
@@ -111,7 +111,11 @@
 	'Get-Profiles',
 	'Find-Profiles',
 	'Update-Profile',
-	'Remove-Profile'
+	'Remove-Profile',
+	'New-Notification',
+	'Find-Notifications',
+	'Get-Notifications',
+	'Remove-Notification'
 	
 	# DSC class resources to export from this module.
 	#DSCResourcesToExport = ''
