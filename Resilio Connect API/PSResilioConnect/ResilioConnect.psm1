@@ -1849,6 +1849,7 @@ if ($PSVersionTable.PSVersion -lt "6.0")
 	####################################################################################
 }
 
+
 $MC_host_and_port = ""
 $API_token = ""
 $base_url = "https://$Host/api/v2"
