@@ -25,15 +25,14 @@ function ConvertTo-UnixTime
 }
 # --------------------------------------------------------------------------------------------------------------------------------
 
-function Initialize-ConnectJobBlob
+function Initialize-ConnectJobObj
 {
 	<#
 	.SYNOPSIS
 	Call this function to start a Resilio Connect job creation / update
 	.DESCRIPTION
-	This function prepares a blob object which represents all properties for the upcoming job creation or update. New call will wipe out
-	all the properties already loaded into blob object.
-	All consequent call of Add-*ToBlob keep adding data until you call New-ConnectJobFromBlob or Update-ConnectJobFromBlob function which actually creates / updates
+	This function prepares and retunrs an object which represents all properties for the upcoming job creation or update. 
+	All consequent call of Add-*ToObj keep adding data until you call New-ConnectJobFromObj or Update-ConnectJobFromObj function which actually creates / updates
 	Resilio Connect job based on accumulated data.
 	.PARAMETER Name
 	Job name. Can be any. Can be later used to automatically create paths for agents or groups participating in the job.
@@ -45,11 +44,21 @@ function Initialize-ConnectJobBlob
 	ID of the job profile to use. Leave empty to use default job profile.
 	.PARAMETER Priority
 	Priority to assign to a job
+	.EXAMPLE
+	$jobobj = Initialize-ConnectJobObj -Name "PS module test job" -JobType distribution -Description "job done by PS module" -ProfileID (Find-Profiles -Type job -Name "no hash*" -OnlyOne)
+	$jobobj | Add-AgentToConnectJobObj -AgentID (Find-Agents -AgentName "Management*" -OnlyOne) -LinuxPath "/home/ubuntu/Resilio Connect Agent/TestDistributionJob" -Permission rw
+	$jobobj | Add-GroupToConnectJobObj -GroupID (Find-Groups -GroupName "roman*" -OnlyOne) -AutoPath -Macro "%HOME%" -Permission ro
+	$jobobj | Add-ScriptToConnectJobObj -OS win -ScriptBody 'Write-Host 123' -ScriptType complete -PowerShell
+	$jobobj | Add-ScriptToConnectJobObj -OS linux -ScriptBody 'echo 123' -ScriptType complete
+	$jobobj | Add-SchedulerToConnectJobObj -OnceAt "2021-08-10 15:00"
+	$jobobj | New-ConnectJobFromObj 
+	
+	Creates a distribution job in MC. Finds and sets the profile with name "No hash applied". Source agent wold be Management Console agent. Destination group would be "Romans agents"
+	Also adds an output text "123" via powershell on completion on Windows and using echo on Linux. Job planned to run once on 2021-08-10 15:00
+
 	.LINK
-	https://connect.resilio.com/hc/en-us/articles/115001080024-Synchronization-job
-	https://connect.resilio.com/hc/en-us/articles/115001070190-Distribution-job
-	https://connect.resilio.com/hc/en-us/articles/115001070170-Consolidation-Job
-	https://connect.resilio.com/hc/en-us/articles/115001080544-Script-job
+	https://www.resilio.com/api/connect/documentation/#api-Jobs-CreateJob
+	https://connect.resilio.com/hc/en-us/articles/1500002762842-Types-of-jobs
 	#>
 	param
 	(
@@ -60,31 +69,34 @@ function Initialize-ConnectJobBlob
 		[int]$ProfileID,
 		[int]$Priority
 	)
-	$script:cjblob = New-Object System.Object
-	if ($Name) { $script:cjblob | Add-Member -NotePropertyName "name" -NotePropertyValue $Name }
-	if ($JobType) { $script:cjblob | Add-Member -NotePropertyName "type" -NotePropertyValue $JobType }
-	if ($Description) { $script:cjblob | Add-Member -NotePropertyName "description" -NotePropertyValue $Description }
-	if ($ProfileID) { $script:cjblob | Add-Member -NotePropertyName "profile_id" -NotePropertyValue $ProfileID }
+	$ConnectJobObject = New-Object System.Object
+	if ($Name) { $ConnectJobObject | Add-Member -NotePropertyName "name" -NotePropertyValue $Name }
+	if ($JobType) { $ConnectJobObject | Add-Member -NotePropertyName "type" -NotePropertyValue $JobType }
+	if ($Description) { $ConnectJobObject | Add-Member -NotePropertyName "description" -NotePropertyValue $Description }
+	if ($ProfileID) { $ConnectJobObject | Add-Member -NotePropertyName "profile_id" -NotePropertyValue $ProfileID }
 	if ($Priority)
 	{
 		$tmp = New-Object System.Object
 		$tmp | Add-Member -NotePropertyName "priority" -NotePropertyValue $Priority
-		$script:cjblob | Add-Member -NotePropertyName "settings" -NotePropertyValue $tmp
+		$ConnectJobObject | Add-Member -NotePropertyName "settings" -NotePropertyValue $tmp
 	}
+	return $ConnectJobObject
 }
-#-----------------------------------------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------------------
 
-function Add-GroupToBlob
+function Add-GroupToConnectJobObj
 {
 	<#
 	.SYNOPSIS
 	Adds group with paths to send / receive data to job object.
 	.DESCRIPTION
-	Call this function if you want to add a group of agents in the upcoming job creation. Note, that Initialize-ConnectJobBlob must be called
+	Call this function if you want to add a group of agents in the upcoming job creation. Note, that Initialize-ConnectJobObj must be called
 	before you call this function. 
 	This function can be called multiple times for adding more groups.
+	.PARAMETER ConnectJobObject
+	Job object. Must be created in advance with Initialize-ConnectJobObj
 	.PARAMETER GroupID
-	Identified of a group to add. Can be piped from Find-Groups call.
+	Identified of a group to add
 	.PARAMETER Macro
 	Specified path Macro for the group inside this job. Can take values of %FOLDERS_STORAGE%", "%HOME%", "%USERPROFILE%", "%DOWNLOADS%"
 	.PARAMETER WinPath
@@ -98,12 +110,21 @@ function Add-GroupToBlob
 	.PARAMETER Permission
 	Specifies access level of that group to the data. Can be "rw, ro, srw, sro". s* values represent selective sync and are only applicable
 	to Sync job type. For distribution and consolidation jobs rw represents source and ro represents destination.
+	.EXAMPLE
+	$jobobj = Initialize-ConnectJobObj -Name "Quick test job" -JobType sync
+	$jobobj | Add-GroupToConnectJobObj -GroupID 15 -AutoPath -Macro "%FOLDERS_STORAGE%" -Permission rw
+	$jobobj | New-ConnectJobFromObj 
+	
+	Creates a synchronization job "Quick test job", adds all agents in group with ID 15 as read-write agents with the path %FOLDERS_STORAGE%\Quick test job
 	.LINK
+	https://www.resilio.com/api/connect/documentation/#api-Jobs-CreateJob
 	https://connect.resilio.com/hc/en-us/articles/115001069970-Path-Macros
 	#>
 	param
 	(
 		[Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+		$ConnectJobObject,
+		[Parameter(Mandatory = $true)]
 		[int]$GroupID,
 		[string]$Macro = "",
 		[string]$WinPath = "",
@@ -114,48 +135,44 @@ function Add-GroupToBlob
 		[Parameter(Mandatory = $true)]
 		[string]$Permission
 	)
-	BEGIN
+	if ($AutoPath)
 	{
-		if ($AutoPath)
-		{
-			$WinPath = $script:cjblob.name
-			$OsxPath = $script:cjblob.name
-			$LinuxPath = $script:cjblob.name
-		}
+		$WinPath = $ConnectJobObject.name
+		$OsxPath = $ConnectJobObject.name
+		$LinuxPath = $ConnectJobObject.name
 	}
-	PROCESS
+	$group = New-Object System.Object
+	$group | Add-Member -NotePropertyName "id" -NotePropertyValue $GroupID
+	$group | Add-Member -NotePropertyName "permission" -NotePropertyValue $Permission
+	$resiliopath = New-Object System.Object
+	if (![System.String]::IsNullOrEmpty($Macro)) { $resiliopath | Add-Member -NotePropertyName "macro" -NotePropertyValue $Macro }
+	$resiliopath | Add-Member -NotePropertyName "win" -NotePropertyValue $WinPath
+	$resiliopath | Add-Member -NotePropertyName "osx" -NotePropertyValue $OsxPath
+	$resiliopath | Add-Member -NotePropertyName "linux" -NotePropertyValue $LinuxPath
+	$group | Add-Member -NotePropertyName "path" -NotePropertyValue $resiliopath
+	if (!$ConnectJobObject.groups)
 	{
-		$group = New-Object System.Object
-		$group | Add-Member -NotePropertyName "id" -NotePropertyValue $GroupID
-		$group | Add-Member -NotePropertyName "permission" -NotePropertyValue $Permission
-		$resiliopath = New-Object System.Object
-		if (![System.String]::IsNullOrEmpty($Macro)) { $resiliopath | Add-Member -NotePropertyName "macro" -NotePropertyValue $Macro }
-		$resiliopath | Add-Member -NotePropertyName "win" -NotePropertyValue $WinPath
-		$resiliopath | Add-Member -NotePropertyName "osx" -NotePropertyValue $OsxPath
-		$resiliopath | Add-Member -NotePropertyName "linux" -NotePropertyValue $LinuxPath
-		$group | Add-Member -NotePropertyName "path" -NotePropertyValue $resiliopath
-		if (!$script:cjblob.groups)
-		{
-			$groups = @()
-			$groups += $group
-			$script:cjblob | Add-Member -NotePropertyName "groups" -NotePropertyValue $groups
-		}
-		else { $script:cjblob.groups += $group }
+		$groups = @()
+		$groups += $group
+		$ConnectJobObject | Add-Member -NotePropertyName "groups" -NotePropertyValue $groups
 	}
+	else { $ConnectJobObject.groups += $group }
 }
 #-----------------------------------------------------------------------------------------------------------------------------------------------------
 
-function Add-AgentToBlob
+function Add-AgentToConnectJobObj
 {
 	<#
 	.SYNOPSIS
 	Adds agent with paths to send / receive data to job object.
 	.DESCRIPTION
-	Call this function if you want to add an agent in the upcoming job creation. Note, that Initialize-ConnectJobBlob must be called
+	Call this function if you want to add an agent in the upcoming job creation. Note, that Initialize-ConnectJobObj must be called
 	before you call this function. 
 	This function can be called multiple times for adding more agents.
+	.PARAMETER ConnectJobObject
+	Job object. Must be created in advance with Initialize-ConnectJobObj
 	.PARAMETER AgentID
-	Identifies an agent to add. Can be piped from Find-Agents call.
+	Identifies an agent to add. 
 	.PARAMETER Macro
 	Specified path Macro for the agent inside this job. Can take values of %FOLDERS_STORAGE%", "%HOME%", "%USERPROFILE%", "%DOWNLOADS%"
 	.PARAMETER WinPath
@@ -169,12 +186,23 @@ function Add-AgentToBlob
 	.PARAMETER Permission
 	Specifies access level of that agent to the data. Can be "rw, ro, srw, sro". s* values represent selective sync and are only applicable
 	to Sync job type. For distribution and consolidation jobs rw represents source and ro represents destination.
+	.EXAMPLE
+	$jobobj = Initialize-ConnectJobObj -Name "BY to US sync" -JobType sync
+	$jobobj | Add-AgentToConnectJobObj -AgentID (Find-Agents -AgentName "Management*" -OnlyOne) -LinuxPath "/home/ubuntu/Resilio Connect Agent/BY-to-US" -Permission ro
+	$jobobj | Add-AgentToConnectJobObj -AgentID 206 -WinPath "C:\BY-to-US" -Permission rw
+	$jobobj | New-ConnectJobFromObj 
+
+	Creates a job named "BY to US sync" using 2 agents: MC agent as read-only receiver and agent with ID 206 as read-write sender
+	
 	.LINK
+	https://www.resilio.com/api/connect/documentation/#api-Jobs-CreateJob
 	https://connect.resilio.com/hc/en-us/articles/115001069970-Path-Macros
 	#>
 	param
 	(
 		[Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+		$ConnectJobObject,
+		[Parameter(Mandatory = $true)]
 		[int]$AgentID,
 		[string]$Macro = "",
 		[string]$WinPath = "",
@@ -185,47 +213,43 @@ function Add-AgentToBlob
 		[Parameter(Mandatory = $true)]
 		[string]$Permission
 	)
-	BEGIN
+	if ($AutoPath)
 	{
-		if ($AutoPath)
-		{
-			$WinPath = $script:cjblob.name
-			$OsxPath = $script:cjblob.name
-			$LinuxPath = $script:cjblob.name
-		}
+		$WinPath = $ConnectJobObject.name
+		$OsxPath = $ConnectJobObject.name
+		$LinuxPath = $ConnectJobObject.name
 	}
-	PROCESS
+	$agent = New-Object System.Object
+	$agent | Add-Member -NotePropertyName "id" -NotePropertyValue $AgentID
+	$agent | Add-Member -NotePropertyName "permission" -NotePropertyValue $Permission
+	$resiliopath = New-Object System.Object
+	if (![System.String]::IsNullOrEmpty($Macro)) { $resiliopath | Add-Member -NotePropertyName "macro" -NotePropertyValue $Macro }
+	$resiliopath | Add-Member -NotePropertyName "win" -NotePropertyValue $WinPath
+	$resiliopath | Add-Member -NotePropertyName "osx" -NotePropertyValue $OsxPath
+	$resiliopath | Add-Member -NotePropertyName "linux" -NotePropertyValue $LinuxPath
+	$agent | Add-Member -NotePropertyName "path" -NotePropertyValue $resiliopath
+	if (!$ConnectJobObject.agents)
 	{
-		$agent = New-Object System.Object
-		$agent | Add-Member -NotePropertyName "id" -NotePropertyValue $AgentID
-		$agent | Add-Member -NotePropertyName "permission" -NotePropertyValue $Permission
-		$resiliopath = New-Object System.Object
-		if (![System.String]::IsNullOrEmpty($Macro)) { $resiliopath | Add-Member -NotePropertyName "macro" -NotePropertyValue $Macro }		
-		$resiliopath | Add-Member -NotePropertyName "win" -NotePropertyValue $WinPath
-		$resiliopath | Add-Member -NotePropertyName "osx" -NotePropertyValue $OsxPath
-		$resiliopath | Add-Member -NotePropertyName "linux" -NotePropertyValue $LinuxPath
-		$agent | Add-Member -NotePropertyName "path" -NotePropertyValue $resiliopath
-		if (!$script:cjblob.agents)
-		{
-			$agents = @()
-			$agents += $agent
-			$script:cjblob | Add-Member -NotePropertyName "agents" -NotePropertyValue $agents
-		}
-		else { $script:cjblob.agents += $agent }
+		$agents = @()
+		$agents += $agent
+		$ConnectJobObject | Add-Member -NotePropertyName "agents" -NotePropertyValue $agents
 	}
+	else { $ConnectJobObject.agents += $agent }
 }
 #-----------------------------------------------------------------------------------------------------------------------------------------------------
 
-function Add-ScriptToBlob
+function Add-ScriptToConnectJobObj
 {
 	<#
 	.SYNOPSIS
 	Adds triggers to the distribution and consolidation job or script to the script job.
 	.DESCRIPTION
 	Call this function if you want to add a trigger to the distribution or consolidation job. Also use it if you need to set a script for the scrip job.
-	Note, that Initialize-ConnectJobBlob must be called before you call this function. Function	pushes required script inside the job object, 
-	which is used later in New-ConnectJobFromBlob call.
+	Note, that Initialize-ConnectJobObj must be called before you call this function. Function	pushes required script inside the job object, 
+	which is used later in New-ConnectJobFromObj call.
 	Function can be called multiple times to add scripts for different operating systems or different trigger conditions.
+	.PARAMETER ConnectJobObject
+	Job object. Must be created in advance with Initialize-ConnectJobObj
 	.PARAMETER OS
 	Specified which OS the script you are adding is targeted for.
 	.PARAMETER ScriptBody
@@ -239,9 +263,28 @@ function Add-ScriptToBlob
 	the script is actually a trigger for distribution or consolidation job.
 	.PARAMETER Powershell
 	Set this switch if your script is a powershell script for Windows. This will automatically set proper values for ShellPath and ScriptFileExtension
+	.EXAMPLE
+	$scriptbody = "
+	Write-Host `"Copy started at (Get-Date)`"
+	Copy-Item -Path . -Filter *.pdf -DestinationPath C:\Arrivals -Force
+	Write-Host `"Copy done at (Get-Date)`"
+	"
+	
+	$jobobj = Initialize-ConnectJobObj -Name "Copy script" -JobType script
+	$jobobj | Add-AgentToConnectJobObj -AgentID (Find-Agents -AgentName "*lonebot" -OnlyOne) -WinPath "C:\TestFolders\123" -Permission rw
+	$jobobj | Add-ScriptToConnectJobObj -ScriptType scriptjob -PowerShell -ScriptBody $scriptbody -OS win
+	$jobobj | New-ConnectJobFromObj
+	
+	Creates a script job for a single agent named "Adastra Lonebot" with script run path "C:\TestFolders\123" and multi-line script
+	
+	.LINK
+	https://www.resilio.com/api/connect/documentation/#api-Jobs-CreateJob
+	https://connect.resilio.com/hc/en-us/articles/115001069710-Scripts-
 	#>
 	param
 	(
+		[Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+		$ConnectJobObject,
 		[ValidateSet("linux", "win", "osx")]
 		[Parameter(Mandatory = $true)]
 		[string]$OS,
@@ -264,44 +307,52 @@ function Add-ScriptToBlob
 	if (![System.String]::IsNullOrEmpty($ShellPath)) { $scriptprops | Add-Member -NotePropertyName "shell" -NotePropertyValue "$ShellPath" }
 	if (![System.String]::IsNullOrEmpty($ScriptFileExtension)) { $scriptprops | Add-Member -NotePropertyName "ext" -NotePropertyValue "$ScriptFileExtension" }
 	
-	if ($ScriptType -eq "scriptjob") # Add script for scripjob here
+	# Add script for scripjob here
+	if ($ScriptType -eq "scriptjob") 
 	{
-		if (!$script:cjblob.script)
+		if (!$ConnectJobObject.script)
 		{
 			$scriptobj = New-Object System.Object
-			$script:cjblob | Add-Member -NotePropertyName "script" -NotePropertyValue $scriptobj
+			$ConnectJobObject | Add-Member -NotePropertyName "script" -NotePropertyValue $scriptobj
+			$ConnectJobObject.script | Add-Member -NotePropertyName "linux" -NotePropertyValue $null
+			$ConnectJobObject.script | Add-Member -NotePropertyName "win" -NotePropertyValue $null
+			$ConnectJobObject.script | Add-Member -NotePropertyName "osx" -NotePropertyValue $null
 		}
-		$script:cjblob.script | Add-Member -NotePropertyName $OS -NotePropertyValue $scriptprops -Force
+		$ConnectJobObject.script."$OS" = $scriptprops
 		return
 	}
 	
 	# If this is not a scripjob, add it to proper "triggers" section
-	
-	if (!$script:cjblob.triggers)
+	if (!$ConnectJobObject.triggers)
 	{
 		$scriptobj = New-Object System.Object
-		$script:cjblob | Add-Member -NotePropertyName "triggers" -NotePropertyValue $scriptobj
+		$ConnectJobObject | Add-Member -NotePropertyName "triggers" -NotePropertyValue $scriptobj
 	}
-	if (!$script:cjblob.triggers."$ScriptType")
+	if (!$ConnectJobObject.triggers."$ScriptType")
 	{
 		$scriptobj = New-Object System.Object
-		$script:cjblob.triggers | Add-Member -NotePropertyName "$ScriptType" -NotePropertyValue $scriptobj
+		$ConnectJobObject.triggers | Add-Member -NotePropertyName "$ScriptType" -NotePropertyValue $scriptobj
+		$ConnectJobObject.triggers."$ScriptType" | Add-Member -NotePropertyName "linux" -NotePropertyValue $null
+		$ConnectJobObject.triggers."$ScriptType" | Add-Member -NotePropertyName "win" -NotePropertyValue $null
+		$ConnectJobObject.triggers."$ScriptType" | Add-Member -NotePropertyName "osx" -NotePropertyValue $null
 	}
-	$script:cjblob.triggers."$ScriptType" | Add-Member -NotePropertyName $OS -NotePropertyValue $scriptprops -Force
 	
+	$ConnectJobObject.triggers."$ScriptType"."$OS" = $scriptprops
 }
 #-----------------------------------------------------------------------------------------------------------------------------------------------------
 
-function Add-SchedulerToBlob
+function Add-SchedulerToConnectJobObj
 {
 	<#
 	.SYNOPSIS
 	Use this function to add scheduler to the object representing job
 	.DESCRIPTION
 	This function allows set up scheduler in the object representing job. Scheduler can be very flexible therefore there are many ways to run this function. 
-	Every run discards previous scheduler from the job object and replaces it with a new one. Note, that Initialize-ConnectJobBlob must be called before you 
-	call this function.
+	Every call of this function discards previous scheduler from the job object and replaces it with a new one. Note, that Initialize-ConnectJobObj must be 
+	called before you call this function.
 	Actual scheduler type depends on the parameters you use call it with.
+	.PARAMETER ConnectJobObject
+	Job object. Must be created in advance with Initialize-ConnectJobObj
 	.PARAMETER EveryXMinutes
 	Creates a scheduler to run job every X amount of minutes.
 	.PARAMETER EveryXHours
@@ -323,26 +374,32 @@ function Add-SchedulerToBlob
 	.PARAMETER SkipIfRunning
 	Set parameter to prevent scheduler re-starting the job when a new time to start comes and the previous run is still going.
 	.EXAMPLE
-	Add-SchedulerToBlob -EveryXDays 10 -EveryXDaysAt "10:00"
+	$jobobj | Add-SchedulerToConnectJobObj -EveryXDays 10 -EveryXDaysAt "10:00"
 	Sets up scheduler to run job every 10 days at 10:00
 	.EXAMPLE
-	Add-SchedulerToBlob -EveryXMinutes 30 -StartOn "2019-09-16" -StopOn "2019-09-30 23:59"
+	$jobobj | Add-SchedulerToConnectJobObj -EveryXMinutes 30 -StartOn "2019-09-16" -StopOn "2019-09-30 23:59"
 	Sets up scheduler to run job every 30 minutes, effective from Sep 16 2019 to end of
 	September same year
 	.EXAMPLE
-	Add-SchedulerToBlob -OnceAt "2019-09-17 15:13"
+	$jobobj | Add-SchedulerToConnectJobObj -OnceAt "2019-09-17 15:13"
 	Sets up scheduler to run job only once on 2019-09-17 at 15:13
 	.EXAMPLE
-	Add-SchedulerToBlob -WeeklyOnDays (0, 2, 3) -WeeklyAtTimes ("9:00", "15:00") -SkipIfRunning
+	$jobobj | Add-SchedulerToConnectJobObj -WeeklyOnDays (0, 2, 3) -WeeklyAtTimes ("9:00", "15:00") -SkipIfRunning
 	Sets up scheduler to run job every Sunday, Tuesday, Wednesdat at 9:00 and 15:00 and also
 	not to spawn new job run if previous one is still going
 	.LINK
-	https://connect.resilio.com/hc/en-us/articles/115001070190-Distribution-job
-	https://connect.resilio.com/hc/en-us/articles/115001070170-Consolidation-Job
-	https://connect.resilio.com/hc/en-us/articles/115001080544-Script-job
+	https://www.resilio.com/api/connect/documentation/#api-Jobs-CreateJob
+	https://connect.resilio.com/hc/en-us/articles/1500002762842-Types-of-jobs	
 	#>
 	param
 	(
+		[Parameter(ParameterSetName = "EveryXMinutes")]
+		[Parameter(ParameterSetName = "EveryXHours")]
+		[Parameter(ParameterSetName = "EveryXDays")]
+		[Parameter(ParameterSetName = "Weekly")]
+		[Parameter(ParameterSetName = "OnceAt")]
+		[Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+		$ConnectJobObject,
 		[Parameter(ParameterSetName = "EveryXMinutes")]
 		[int]$EveryXMinutes,
 		[Parameter(ParameterSetName = "EveryXHours")]
@@ -381,30 +438,30 @@ function Add-SchedulerToBlob
 	{
 		$schdobj | Add-Member -NotePropertyName "type" -NotePropertyValue "minutes"
 		$schdobj | Add-Member -NotePropertyName "every" -NotePropertyValue $EveryXMinutes
-		$script:cjblob | Add-Member -NotePropertyName "scheduler" -NotePropertyValue $schdobj -Force
+		$ConnectJobObject | Add-Member -NotePropertyName "scheduler" -NotePropertyValue $schdobj -Force
 		return
 	}
 	if ($EveryXHours)
 	{
 		$schdobj | Add-Member -NotePropertyName "type" -NotePropertyValue "hourly"
 		$schdobj | Add-Member -NotePropertyName "every" -NotePropertyValue $EveryXHours
-		$script:cjblob | Add-Member -NotePropertyName "scheduler" -NotePropertyValue $schdobj -Force
+		$ConnectJobObject | Add-Member -NotePropertyName "scheduler" -NotePropertyValue $schdobj -Force
 		return
 	}
 	if ($EveryXDays)
 	{
-		$datesec = $EveryXDaysAt.Hour*3600 + $EveryXDaysAt.Minute*60 + $EveryXDaysAt.Second
+		$datesec = $EveryXDaysAt.Hour * 3600 + $EveryXDaysAt.Minute * 60 + $EveryXDaysAt.Second
 		$schdobj | Add-Member -NotePropertyName "type" -NotePropertyValue "daily"
 		$schdobj | Add-Member -NotePropertyName "every" -NotePropertyValue $EveryXDays
 		$schdobj | Add-Member -NotePropertyName "time" -NotePropertyValue $datesec
-		$script:cjblob | Add-Member -NotePropertyName "scheduler" -NotePropertyValue $schdobj -Force
+		$ConnectJobObject | Add-Member -NotePropertyName "scheduler" -NotePropertyValue $schdobj -Force
 		return
 	}
 	if ($OnceAt)
 	{
 		$schdobj | Add-Member -NotePropertyName "type" -NotePropertyValue "once"
-		$schdobj | Add-Member -NotePropertyName "time" -NotePropertyValue ConvertTo-UnixTime($OnceAt)
-		$script:cjblob | Add-Member -NotePropertyName "scheduler" -NotePropertyValue $schdobj -Force
+		$schdobj | Add-Member -NotePropertyName "time" -NotePropertyValue (ConvertTo-UnixTime($OnceAt))
+		$ConnectJobObject | Add-Member -NotePropertyName "scheduler" -NotePropertyValue $schdobj -Force
 		return
 	}
 	if ($WeeklyOnDays)
@@ -419,28 +476,29 @@ function Add-SchedulerToBlob
 		$schdobj | Add-Member -NotePropertyName "type" -NotePropertyValue "weekly"
 		$schdobj | Add-Member -NotePropertyName "days" -NotePropertyValue $WeeklyOnDays
 		$schdobj | Add-Member -NotePropertyName "time" -NotePropertyValue $timesArray
-		$script:cjblob | Add-Member -NotePropertyName "scheduler" -NotePropertyValue $schdobj -Force
+		$ConnectJobObject | Add-Member -NotePropertyName "scheduler" -NotePropertyValue $schdobj -Force
 		return
 	}
 }
 #-----------------------------------------------------------------------------------------------------------------------------------------------------
 
-function New-ConnectJobFromBlob
+function New-ConnectJobFromObj
 {
 	<#
 	.SYNOPSIS
-	Call this function to create new job. Ensure to initilize and push necessary data to a blob.
+	Call this function to create new job. Ensure to initilize and push necessary data to a object representing connect job.
 	.DESCRIPTION
-	This function is intended to create a new Resilio Connect job. Before calling this function ensure to 
-	also call: 
-	- InitializeConnectJobBlob to give job a name and type
-	- AddAgentToBlob or AddGroupToBlob to assign some agents to the job
+	This function is intended to create a new Resilio Connect job. Before calling this function ensure to also call at least: 
+	- Initialize-ConnectJobObj to give job a name and type
+	- Add-AgentToConnectJobObj or Add-GroupToConnectJobObj to assign some agents to the job
+	.PARAMETER ConnectJobObject
+	Job object. Must be created in advance with Initialize-ConnectJobObj
 	.EXAMPLE
-	PS> Initialize-ConnectJobBlob -Name "_Cadabra Test" -JobType "distribution"
-	PS> Add-AgentToBlob -AgentID 145 -WinPath "C:\MyTestData" -Permission rw
-	PS> Add-GroupToBlob -GroupID 8 -Macro "%DOWNLOADS%" -AutoPath -Permission ro
-	PS> Add-SchedulerToBlob -EveryXMinutes 30 -StartOn "2019-09-16" -StopOn "2019-09-30 23:59"
-	PS> New-ConnectJobFromBlob
+	$jobobj = Initialize-ConnectJobObj -Name "_Cadabra Test" -JobType "distribution"
+	$jobobj | Add-AgentToConneectJobObj -AgentID 145 -WinPath "C:\MyTestData" -Permission rw
+	$jobobj | Add-GroupToConneectJobObj -GroupID 8 -Macro "%DOWNLOADS%" -AutoPath -Permission ro
+	$jobobj | Add-SchedulerToConneectJobObj -EveryXMinutes 30 -StartOn "2019-09-16" -StopOn "2019-09-30 23:59"
+	$jobobj | New-ConnectJobFromObj
 	
 	This set of calls will cause Management Console to create a new job with Agent 145 as a source,
 	Group with ID 8 as a destination
@@ -448,7 +506,12 @@ function New-ConnectJobFromBlob
 	.LINK
 	https://www.resilio.com/api/documentation/#api-Jobs-CreateJob
 	#>
-	$json = ($script:cjblob | ConvertTo-Json -Depth 10)
+	param
+	(
+		[Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+		$ConnectJobObject
+	)
+	$json = ($ConnectJobObject | ConvertTo-Json -Depth 10)
 	Invoke-ConnectFunction -Method POST -RestPath "jobs" -JSON $json
 }
 #-----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1523,36 +1586,6 @@ function Update-Profile
 }
 # --------------------------------------------------------------------------------------------------------------------------------
 
-function Update-ConnectJobFromBlob
-{
-	<#
-	.SYNOPSIS
-	Call this function to update a job. Ensure to initilize and push necessary data to a blob.
-	.DESCRIPTION
-	This function is intended to update existing Resilio Connect job. Before calling this function ensure to call at least: 
-	- InitializeConnectJobBlob to create a blob representing a job + call any other functions to adjust groups, scheduler, etc.
-	.PARAMETER JobID
-	Specify Job ID to get updated
-	.EXAMPLE
-	PS> Initialize-ConnectJobBlob -Description "I updated that job via API!"
-	PS> Add-SchedulerToBlob -EveryXMinutes 30 -StartOn "2019-09-16" -StopOn "2019-09-30 23:59"
-	PS> Update-ConnectJobFromBlob
-	
-	This will change the description of the job and set it a scheduler
-	
-	.LINK
-	https://www.resilio.com/api/documentation/#api-Jobs-UpdateJob
-	#>
-	param
-	(
-		[parameter(Mandatory = $true)]
-		[int]$JobID
-	)
-	$json = ($script:cjblob | ConvertTo-Json -Depth 10)
-	Invoke-ConnectFunction -Method PUT -RestPath "jobs/$JobID" -JSON $json
-}
-#-----------------------------------------------------------------------------------------------------------------------------------------------------
-
 function Get-Notifications
 {
 	<#
@@ -1736,7 +1769,6 @@ function New-Notification
 			$tmp | Add-Member -NotePropertyName "settings" -NotePropertyValue $settings
 		}
 		$json = ($tmp | ConvertTo-Json -Depth 10)
-		Write-Host $json
 		Invoke-ConnectFunction -Method POST -RestPath "notifications" -JSON $json
 	}
 	
@@ -1853,6 +1885,5 @@ if ($PSVersionTable.PSVersion -lt "6.0")
 $MC_host_and_port = ""
 $API_token = ""
 $base_url = "https://$Host/api/v2"
-$cjblob = New-Object System.Object
 
 

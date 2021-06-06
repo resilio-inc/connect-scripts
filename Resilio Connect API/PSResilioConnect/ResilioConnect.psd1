@@ -19,7 +19,7 @@
 	RootModule = 'ResilioConnect.psm1'
 	
 	# Version number of this module.
-	ModuleVersion = '2.12.4.2'
+	ModuleVersion = '2.12.4.3'
 	
 	# ID used to uniquely identify this module
 	GUID = '295f76f4-3447-4b77-9571-780625279be6'
@@ -98,13 +98,6 @@
 	'Set-AgentsToGroup',
 	'Start-ConnectJob',
 	'Stop-ConnectJob',
-	'Update-ConnectJobFromBlob',
-	'Initialize-ConnectJobBlob',
-	'Add-GroupToBlob',
-	'Add-AgentToBlob',
-	'Add-ScriptToBlob',
-	'Add-SchedulerToBlob',
-	'New-ConnectJobFromBlob',
 	'ConvertFrom-UnixTime',
 	'ConvertTo-UnixTime',
 	'New-Profile',
@@ -115,7 +108,13 @@
 	'New-Notification',
 	'Find-Notifications',
 	'Get-Notifications',
-	'Remove-Notification'
+	'Remove-Notification',
+	'Initialize-ConnectJobObj'.
+	'Add-GroupToConnectJobObj',
+	'Add-AgentToConnectJobObj',
+	'Add-ScriptToConnectJobObj',
+	'Add-SchedulerToConnectJobObj',
+	'New-ConnectJobFromObj'
 	
 	# DSC class resources to export from this module.
 	#DSCResourcesToExport = ''
