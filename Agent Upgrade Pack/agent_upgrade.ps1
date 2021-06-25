@@ -459,7 +459,7 @@ try
 	}
 	
 	# Now kill all the rest of agents which are actually UI processes
-	Get-Process -Name "Resilio Connect Agent" | Stop-Process
+	Get-Process -Name "Resilio Connect Agent" | Stop-Process -Force
 	
 	# Rename old executable
 	Move-Item -Path "$fullexepath" -Destination "$fullexepath.old" -Force
