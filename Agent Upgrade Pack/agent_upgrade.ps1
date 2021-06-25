@@ -458,6 +458,9 @@ try
 		Write-Verbose "Agent service failed to stop, killing process"
 	}
 	
+	# Now kill all the rest of agents which are actually UI processes
+	Get-Process -Name "Resilio Connect Agent" | Stop-Process
+	
 	# Rename old executable
 	Move-Item -Path "$fullexepath" -Destination "$fullexepath.old" -Force
 	Write-Verbose "Old binary got renamed"
