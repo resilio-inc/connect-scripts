@@ -36,7 +36,7 @@ $tmp = Get-ItemProperty -path 'HKLM:\SOFTWARE\Resilio Inc.\Resilio Connect Conso
 if ($tmp)
 {
 	$AgentExecutable = "$($tmp.InstallDir)\agent\Resilio Connect Agent.exe"
-	$ConfigPath = "$($env:ProgramData)\Resilio\Connect Server\var\sync.conf"
+	$ConfigPath = "$($env:ProgramData)\Resilio\Connect Server\sync.conf"
 	$NonRemovableAgentCount++
 	$ActualAgentCount++
 }
