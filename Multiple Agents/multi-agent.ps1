@@ -58,6 +58,12 @@ if ($AgentCount -eq -1)
 	exit 0
 }
 
+# Verify if PS is 5 or newer
+if ($PSVersionTable.PSVersion -lt "5.1")
+{
+	throw "Powershell must be 5.1 or newer"
+}
+
 # Verify if config exists at all
 if (![System.IO.File]::Exists($ConfigPath))
 {
