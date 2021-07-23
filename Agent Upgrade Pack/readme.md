@@ -8,7 +8,7 @@ Minimal set of files that should be present in your upgrade folder to get agents
 * Resilio-Connect-Agent.exe (get from download site, not mandatory if no x86 windows to upgrade)
 * Resilio-Connect-Agent_x64.exe (get from download site)
 
-The files *.copy_to_trigger are not necessary to be present in distributed folder but copied to the trigger of upgrade job on MC. See user's upgrade instruction [here](https://connect.resilio.com/hc/en-us/articles/115001080444-Upgrading-your-Agents-using-Distribution-Job).
+The files *.copy_to_trigger are not necessary to be present in distributed folder but copied to the trigger of upgrade job on MC. See user's upgrade instruction [here](https://connect.resilio.com/hc/en-us/articles/360004845800-Updating-your-Agents-using-Distribution-Job).
 
 ## agent_upgrade.ps1 ![alt text](https://i.imgur.com/F6NAQyb.png "Script supports standard Get-Help cmdlet")
 The script is actually doing an upgrade, which includes:
