@@ -22,7 +22,7 @@ The script is actually doing an upgrade, which includes:
 * Updating Explorer extensions to the new one (with explorer automatic restart)
 
 During verification step the script verifies if all the pre-requisites are met to perform an upgrade. In case something is missing, script will report an error and exit with error code. In case you cannot get upgrade logs, you can rely on codes:
-
+<a id="error-table"></a>
 | Error code    | Error meaning                                                                               |
 | ------------- | ------------------------------------------------------------------------------------------- |
 | 0             | All is okay, proceed with an upgrade                                                        |
