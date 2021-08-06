@@ -1,4 +1,4 @@
-rem ---------------- Script updated on 2011-07-23 --------------------------
+rem ---------------- Script updated on 2021-07-23 --------------------------
 rem Uncomment the line below to prevent script from checking free disk space required for upgrade
 rem set DontCheckDiskSpace="-NoDiskSpaceCheck"
 
