@@ -1,4 +1,4 @@
-rem ---------------- Script updated on 2021-07-23 --------------------------
+rem ---------------- Script updated on 2021-08-18 --------------------------
 rem Uncomment the line below to prevent script from checking free disk space required for upgrade
 rem set DontCheckDiskSpace="-NoDiskSpaceCheck"
 
@@ -32,14 +32,14 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File agent_upgrade.ps1 -Verif
 
 set ERR=%ERRORLEVEL%
 
+type verify.log
+
 if %ERR%==1 (
 echo No need to upgrade, same version detected
-type verify.log
 exit /b 0
 )
 
 if %ERR% GEQ 2 (
-type verify.log
 exit /b %ERR%
 )
 
