@@ -229,7 +229,8 @@ function Traverse-Directory
 }
 # ----------------------------------------------------------------------------------------------------------------------------------------
 
-Write-Host "Script started, will fix permissions for `"$Path`""
+Write-Host "Script version 1.0 (2021-09-03) started"
+Write-Host "Will fix permissions for `"$Path`""
 $FileCounter = 0
 $DirCounter = 0
 $ItemsUpdated = 0
