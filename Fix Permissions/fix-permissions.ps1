@@ -100,12 +100,26 @@ function Process-Item
 	
 	# Search ACL for necessary user account permission "FullControl" -> "Allow"
 	$missing_allow_permission = $true
-	foreach ($ace in $acl.Access)
+	if ($IsDirectory)
 	{
-		if ($ace.IdentityReference -like $UserAccount -and $ace.FileSystemRights -like "FullControl" -and $ace.AccessControlType -like "Allow")
+		foreach ($ace in $acl.Access)
 		{
-			$missing_allow_permission = $false
-			break
+			if ($ace.IdentityReference -like $UserAccount -and $ace.FileSystemRights -like "FullControl" -and $ace.AccessControlType -like "Allow" -and $ace.InheritanceFlags -like "*ContainerInherit*" -and $ace.InheritanceFlags -like "*ObjectInherit*")
+			{
+				$missing_allow_permission = $false
+				break
+			}
+		}
+	}
+	else
+	{
+		foreach ($ace in $acl.Access)
+		{
+			if ($ace.IdentityReference -like $UserAccount -and $ace.FileSystemRights -like "FullControl" -and $ace.AccessControlType -like "Allow")
+			{
+				$missing_allow_permission = $false
+				break
+			}
 		}
 	}
 	if ($missing_allow_permission)
