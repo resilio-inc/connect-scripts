@@ -65,14 +65,29 @@ function Process-Item
 		[parameter(Mandatory = $true)]
 		[String]$PathToItem,
 		[switch]$UseCurrentUser,
-		[switch]$RemoveDenialACEs
+		[switch]$RemoveDenialACEs,
+		[switch]$IsDirectory
 	)
-	$UserAccount = $TargetUser
-	$AccessRuleObject = $script:TargetUserAccessRuleObject
-	if ($UseCurrentUser)
+	
+	if ($IsDirectory)
 	{
-		$UserAccount = $script:CurrentUser
-		$AccessRuleObject = $script:CurrentUserAccessRuleObject
+		$UserAccount = $TargetUser
+		$AccessRuleObject = $script:TargetUserAccessRuleObjectForDir
+		if ($UseCurrentUser)
+		{
+			$UserAccount = $script:CurrentUser
+			$AccessRuleObject = $script:CurrentUserAccessRuleObjectForDir
+		}
+	}
+	else
+	{
+		$UserAccount = $TargetUser
+		$AccessRuleObject = $script:TargetUserAccessRuleObjectForFile
+		if ($UseCurrentUser)
+		{
+			$UserAccount = $script:CurrentUser
+			$AccessRuleObject = $script:CurrentUserAccessRuleObjectForFile
+		}
 	}
 	
 	$acl = Get-Acl -LiteralPath $PathToItem
@@ -169,7 +184,7 @@ function Traverse-Directory
 	{
 		if ($Error.CategoryInfo.Category -eq "PermissionDenied")
 		{
-			Process-Item $PathToProcess -UseCurrentUser -RemoveDenialACEs
+			Process-Item $PathToProcess -UseCurrentUser -RemoveDenialACEs -IsDirectory
 			$FilesList = Get-ChildItem -LiteralPath $PathToProcess -Force -Attributes !Directory
 		}
 		else
@@ -187,7 +202,7 @@ function Traverse-Directory
 	}
 	foreach ($dir in $DirsList)
 	{
-		Process-Item $dir.FullName
+		Process-Item $dir.FullName -IsDirectory
 	}
 	$script:FileCounter += $FilesList.Count
 	$script:DirCounter += $DirsList.Count
@@ -207,8 +222,11 @@ $ItemsUpdated = 0
 $UnsuccesfulUpdates = 0
 $OwnerObject = New-Object System.Security.Principal.NTAccount("$env:USERDOMAIN", "$env:USERNAME")
 $CurrentUser = "$env:USERDOMAIN\$env:USERNAME"
-$TargetUserAccessRuleObject = New-Object System.Security.AccessControl.FileSystemAccessRule($TargetUser, "FullControl", "Allow")
-$CurrentUserAccessRuleObject = New-Object System.Security.AccessControl.FileSystemAccessRule($CurrentUser, "FullControl", "Allow")
+$TargetUserAccessRuleObjectForFile = New-Object System.Security.AccessControl.FileSystemAccessRule($TargetUser, "FullControl", "Allow")
+$CurrentUserAccessRuleObjectForFile = New-Object System.Security.AccessControl.FileSystemAccessRule($CurrentUser, "FullControl", "Allow")
+$TargetUserAccessRuleObjectForDir = New-Object System.Security.AccessControl.FileSystemAccessRule($TargetUser, "FullControl", "ContainerInherit, ObjectInherit", "None", "Allow")
+$CurrentUserAccessRuleObjectForDir = New-Object System.Security.AccessControl.FileSystemAccessRule($CurrentUser, "FullControl", "ContainerInherit, ObjectInherit", "None", "Allow")
+
 if ($SupportLongPath) { $Path = "\\?\$Path" }
 
 Write-Host "Checking for elevated privileges..."
@@ -221,4 +239,4 @@ Write-Host "[OK]"
 Write-Host "Traversing directories recursively..."
 Traverse-Directory -PathToProcess $Path
 Write-Progress -Activity "Traversing directories recursively" -Completed
-Write-Host "Processed total $FileCounter files, $DirCounter dirs. Updated items $($ItemsUpdated - $UnsuccesfulUpdates)/$UnsuccesfulUpdates (success/unsuccess)"
+Write-Host "Processed total $FileCounter files, $DirCounter dirs. Updated items $($ItemsUpdated - $UnsuccesfulUpdates)/$UnsuccesfulUpdates (success/failure)"
