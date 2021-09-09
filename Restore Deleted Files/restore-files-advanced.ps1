@@ -4,7 +4,9 @@ param
 	[string]$Path,
 	[string]$Database,
 	[switch]$WhatIf,
-	[String]$Log
+	[String]$Log,
+	[datetime]$From,
+	[datetime]$To
 )
 
 <#
@@ -273,12 +275,12 @@ try
 	$EntryIndex = -1
 	$OldEntryIndex = -1
 	$TotalEntries = $uniques.Count
-	Write-Host "Restoring $TotalEntries files"
+	Write-Host "Total files deleted: $TotalEntries, restoring"
 	Write-Progress -Activity "Restoring files" -PercentComplete 0
 	foreach ($key in $uniques.Keys)
 	{
 		$EntryIndex++
-		if (($EntryIndex - $OldEntryIndex) -gt 1000)
+		if (($EntryIndex - $OldEntryIndex) -gt 1000) # Display progress for each 1K entries to not to consume too much performance
 		{
 			Write-Progress -Activity "Restoring files" -Status "Restored $EntryIndex of $TotalEntries total" -PercentComplete (($EntryIndex * 100) / $TotalEntries)
 			$OldEntryIndex = $EntryIndex
@@ -288,6 +290,23 @@ try
 		$fullarchivedpath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($fileprops['archived_name'])
 		$tmp = "$Path\$key"
 		$real_position_path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($tmp)
+		if ($From)
+		{
+			if ($mtime -lt $From)
+			{
+				$LoggerStream.Write("Ignoring (time) `"$fullarchivedpath`" archived on $mtime`n")
+				continue
+			}
+		}
+		if ($To)
+		{
+			if ($mtime -gt $To)
+			{
+				$LoggerStream.Write("Ignoring (time) `"$fullarchivedpath`" archived on $mtime`n")
+				continue
+			}
+		}
+		
 		if ($WhatIf)
 		{
 			$msg = "File `"$real_position_path`" has been deleted. Can be restored from `"$fullarchivedpath`" archived on $mtime"
