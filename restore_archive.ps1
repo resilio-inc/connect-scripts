@@ -18,7 +18,8 @@ Specifies full path to synced folder.
 
 Param(
   [string]$action,
-  [string]$synced_folder_path
+  [string]$synced_folder_path,
+  [switch]$SupportLongPath
 )
 
 function CalculateUniqueFileName($path, $mtime)
@@ -78,6 +79,8 @@ if ($uniques.ContainsKey($unique_filename))
 #$synced_folder_path = "c:\ABC"
 #$action = "restore"
 
+$synced_folder_path = $synced_folder_path.Trim('\') + "\"
+if ($SupportLongPath) { $synced_folder_path = "\\?\$synced_folder_path" }
 
 $need_to_exit = $false
 
@@ -93,44 +96,40 @@ if ([string]::IsNullOrEmpty($action))
     $need_to_exit = $true
     }
 
-if (!([System.IO.Path]::IsPathRooted($synced_folder_path)))
-    {
-    Write-Host error: supplied path cannot be relative
-    $need_to_exit = $true
-    }
-
 if ($need_to_exit)
     {
     return
     }
 
-$cur_dir = (Get-Item -Path ".\").FullName
-$archive_path = join-path -path $synced_folder_path -ChildPath "\.sync\Archive"
+$archive_path = "$synced_folder_path.sync\Archive"
+$ArhivePathLen = $archive_path.Length
 
-$archived_files = Get-ChildItem -path "$archive_path" -recurse -force -Attributes !Directory
+$archived_files = Get-ChildItem -path "$archive_path" -recurse -force | Where-Object { ! $_.PSIsContainer }
 $uniques = @{}
-
-set-location $archive_path
 
 foreach($archived_file in $archived_files)
     {
-    #$relativepath = Get-Item $archived_file.FullName | Resolve-Path -Relative
-    $relativepath = Resolve-Path -LiteralPath $archived_file.FullName -Relative
-    $unique = CalculateUniqueFileName -path $relativepath
-    UpdateUniqueList -unique_filename $unique -modification_time $archived_file.LastWriteTime -archived_filename $relativepath
+	#$relativepath = Resolve-Path -LiteralPath $archived_file.FullName -Relative
+	$RelativePath = ".\$($archived_file.FullName.Substring($ArhivePathLen+1))"
+	#Write-Host "DEBUG: Relative path is $RelativePath"
+	
+	$unique = CalculateUniqueFileName -path $RelativePath
+	#Write-Host "DEBUG: Unique is $unique"
+	UpdateUniqueList -unique_filename $unique -modification_time $archived_file.LastWriteTime -archived_filename $RelativePath
     }
-
-set-location $synced_folder_path
 
 foreach($key in $uniques.Keys)
     {
     $fileprops = $uniques[$key]
     $mtime = $fileprops['mtime']
     $archivedfile = $fileprops['archived_name']
-    $tmp = Join-Path -Path $archive_path -ChildPath $archivedfile
-    $fullarchivedpath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($tmp)
-    $tmp = Join-Path -Path $synced_folder_path -ChildPath $key
-    $real_position_path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($tmp)
+    $fullarchivedpath = "$archive_path$($archivedfile.Substring(1))"
+	$real_position_path = "$synced_folder_path$($key.SubString(2))"
+#	if ($mtime -lt "2021-01-01" -or $mtime -gt "2021-09-20")
+#	{
+#		Write-host "Skipping $fullarchivedpath - archived on $mtime"
+#		continue
+#	}
     if (Test-Path -LiteralPath $real_position_path -PathType Leaf)
         {
         $uniques[$key]['status'] = 'exists'
@@ -160,5 +159,4 @@ foreach($key in $uniques.Keys)
             }
         }
     }
-Set-Location $cur_dir
     
