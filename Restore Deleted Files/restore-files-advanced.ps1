@@ -4,9 +4,12 @@ param
 	[string]$Path,
 	[string]$Database,
 	[switch]$WhatIf,
-	[String]$Log,
+	[string]$Log,
+	[string]$CSV,
 	[datetime]$From,
-	[datetime]$To
+	[datetime]$To,
+	[switch]$SearchDB,
+	[switch]$SupportLongPath
 )
 
 <#
@@ -155,12 +158,27 @@ Function ConvertFrom-Bencode
 
 function EnsurePathExist($path)
 {
-	$path_only = Split-Path -Path $path
+	$path_only = Split-Path -LiteralPath $path
 	
 	if (!(Test-Path $path_only))
 	{
 		New-Item -Path $path_only -ItemType Directory -Force | Out-Null
 	}
+}
+#---------------------------------------------------------------------------------------------------------------------------------------
+
+function CalculateUniqueFileName($path, $mtime) # Strips the (possible) versioning index from archived name, like "file.<index>.txt"
+{
+	$nameonly = ([io.fileinfo]$path).basename
+	$pathonly = Split-Path -LiteralPath $path
+	if ([string]::IsNullOrEmpty($pathonly)) { $name_and_path = "$nameonly" }
+	else { $name_and_path = "$pathonly\$nameonly" }
+	$extension = ([io.fileinfo]$path).Extension
+	
+	$a = $name_and_path -match "(.*?)(\.{1}(\d*))?$"
+	
+	$unique_name_path_ext = $matches[1] + $extension
+	return $unique_name_path_ext
 }
 #---------------------------------------------------------------------------------------------------------------------------------------
 
@@ -196,7 +214,7 @@ function UpdateUniqueList($unique_filename, $modification_time, $archived_filena
 #---------------------------------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------------------
 
-Write-Host "Script to restore files from archive v2.1 started"
+Write-Host "Script to restore files from archive v2.2 started on $(Get-Date -Format G)"
 $ownscriptpathname = $MyInvocation.MyCommand.Definition
 $ownscriptpath = Split-Path -Path $ownscriptpathname
 $ownscriptname = Split-Path $ownscriptpathname -Leaf
@@ -207,94 +225,129 @@ if (!([System.IO.Path]::IsPathRooted($Path)))
 	return
 }
 
-$tmp = Import-Module PSSqlite -ErrorAction SilentlyContinue -PassThru
-if (!$tmp)
-{
-	Write-Error "SQLite module `"PSSQlite`" not found and it is mandatory to run the script. Use command `"Install-Module PSSQLite`" to install it in Powershell window with elevated privileges"
-	return
-}
-
-$tmp = Invoke-SqliteQuery -DataSource "$Database" -Query "SELECT name FROM sqlite_master WHERE type='table' AND name='deleted_files2'"
-if (!$tmp)
-{
-	Write-Error "The agent DB is too old and does not support advanced archived files restoring"
-	return
-}
-
+$Path = $Path.Trim('\')
+if ($SupportLongPath) { $Path = "\\?\$Path" }
 $uniques = @{ }
-$archive_path = join-path -Path $Path -ChildPath "\.sync\Archive"
+$ArchivePath = "$Path\.sync\Archive"
+$ArhivePathLen = $ArchivePath.Length + 1 # Include traling slash
 
 if ([String]::IsNullOrEmpty($Log))
 {
 	$Log = "$ownscriptpath\restore-$(Split-Path $Path -Leaf).log"
 }
+if ([String]::IsNullOrEmpty($CSV))
+{
+	$CSV = "$ownscriptpath\archived-files-$(Split-Path $Path -Leaf).CSV"
+}
 $LoggerStream = New-Object System.IO.StreamWriter($Log)
-$LoggerStream.Write("Script started on $(Get-Date)`n")
-$tmp = Invoke-SqliteQuery -DataSource "$Database" -Query "SELECT COUNT(*) FROM deleted_files2"
-$TotalEntries = $tmp.'COUNT(*)'
-
+$LoggerStream.Write("Script started on $(Get-Date -Format G)`n")
+$CSVStream = New-Object System.IO.StreamWriter($CSV)
+$CSVStream.Write("`"Status`", `"File path`", `"Archived path`", `"Archived time`"`n")
 try
 {
-	Write-Host "Extracting $TotalEntries entries from database"
-	$tmp = Invoke-SqliteQuery -DataSource "$Database" -Query "SELECT * FROM deleted_files2"
-	
-	$EntryIndex = -1
-	$OldEntryIndex = -1
-	Write-Progress -Activity "Checking removed files" -PercentComplete 0
-	foreach ($record in $tmp)
+	if ($SearchDB) # Script runs in advanced mode to search removed file thru the Resilio DB
 	{
-		$EntryIndex++
-		if (($EntryIndex - $OldEntryIndex) -gt 10000)
+		$tmp = Import-Module PSSqlite -ErrorAction SilentlyContinue -PassThru
+		if (!$tmp)
 		{
-			Write-Progress -Activity "Checking removed files" -Status "Processed $EntryIndex of $TotalEntries" -PercentComplete (($EntryIndex*100) / $TotalEntries)
-			$OldEntryIndex = $EntryIndex
+			Write-Error "SQLite module `"PSSQlite`" not found and it is mandatory to run the script. Use command `"Install-Module PSSQLite`" to install it in Powershell window with elevated privileges"
+			return
 		}
-		
-		
-		$unique_file_name = [System.Text.Encoding]::ASCII.GetString($record.original_path)
-		$real_position_file_path = "$Path\$unique_file_name"
-		$archived_file_path = "$archive_path\$([System.Text.Encoding]::ASCII.GetString($record.path))"
-		$tmp_object = ConvertFrom-Bencode -BencodedData $record.data
-		$archivation_time = ConvertFrom-UnixTime $tmp_object.mtime -ConvertToLocal
-		if (Test-Path -LiteralPath $real_position_file_path -PathType Leaf)
+		$tmp = Invoke-SqliteQuery -DataSource "$Database" -Query "SELECT name FROM sqlite_master WHERE type='table' AND name='deleted_files2'"
+		if (!$tmp)
 		{
-			# File exists outside of the archive, so it's just a version of non removed file
-			continue
+			Write-Error "The agent DB is too old and does not support advanced archived files restoring"
+			return
 		}
-		if (!(Test-Path -LiteralPath $archived_file_path -PathType Leaf))
+		$tmp = Invoke-SqliteQuery -DataSource "$Database" -Query "SELECT COUNT(*) FROM deleted_files2"
+		$TotalEntries = $tmp.'COUNT(*)'
+		Write-Host "Extracting $TotalEntries entries from database"
+		$ArchivedFiles = Invoke-SqliteQuery -DataSource "$Database" -Query "SELECT * FROM deleted_files2"
+		$EntryIndex = -1
+		$OldEntryIndex = -1
+		Write-Progress -Activity "Checking removed files" -PercentComplete 0
+		foreach ($record in $ArchivedFiles)
 		{
-			# File in achive deos not exist, likely human interventon
-			$LoggerStream.Write("Missing file in archive: `"$archived_file_path`"`n")
-			continue
+			$EntryIndex++
+			if (($EntryIndex - $OldEntryIndex) -gt 10000)
+			{
+				Write-Progress -Activity "Checking removed files" -Status "Processed $EntryIndex of $TotalEntries" -PercentComplete (($EntryIndex * 100) / $TotalEntries)
+				$OldEntryIndex = $EntryIndex
+			}
+			
+			$unique_file_name = [System.Text.Encoding]::ASCII.GetString($record.original_path)
+			$archived_file_path = [System.Text.Encoding]::ASCII.GetString($record.path)
+			$archived_full_file_path = "$ArchivePath\$archived_file_path"
+			$tmp_object = ConvertFrom-Bencode -BencodedData $record.data
+			$archivation_time = ConvertFrom-UnixTime $tmp_object.mtime -ConvertToLocal
+			if (!(Test-Path -LiteralPath $archived_full_file_path -PathType Leaf)) # File in achive does not exist, likely human interventon
+			{
+				$LoggerStream.Write("Missing file in archive: `"$archived_full_file_path`"`n")
+				$CSVStream.Write("`"Missing`", `"$Path\$unique_file_name`", `"$archived_full_file_path`", `"$archivation_time`"`n")
+				continue
+			}
+			UpdateUniqueList -unique_filename $unique_file_name -modification_time $archivation_time -archived_filename $archived_file_path
 		}
-		
-		UpdateUniqueList -unique_filename $unique_file_name -modification_time $archivation_time -archived_filename $archived_file_path
+		Write-Progress -Activity "Checking removed files" -Status "Processed $EntryIndex of $TotalEntries" -Completed
 	}
-	Write-Progress -Activity "Checking removed files" -Status "Processed $EntryIndex of $TotalEntries" -Completed
+	else # Script runs in a plain mode so we'll need to scan the archive folder manually
+	{
+		Write-Host "Listing files in archive..."
+		$ArchivedFiles = Get-ChildItem -LiteralPath "$ArchivePath" -Recurse -Force | Where-Object { ! $_.PSIsContainer }
+		Write-Host "Building list of unique files out of files versions..."
+		foreach ($archived_file in $ArchivedFiles)
+		{
+			$RelativePath = "$($archived_file.FullName.Substring($ArhivePathLen))"
+			$unique = CalculateUniqueFileName -path $RelativePath
+			UpdateUniqueList -unique_filename $unique -modification_time $archived_file.LastWriteTime -archived_filename $RelativePath
+		}
+		
+	}
 	
 	$EntryIndex = -1
 	$OldEntryIndex = -1
 	$TotalEntries = $uniques.Count
-	Write-Host "Total files deleted: $TotalEntries, restoring"
-	Write-Progress -Activity "Restoring files" -PercentComplete 0
+	$EntriesToRestore = 0
+	$EntriesSuccessfullyRestored = 0
+	if ($WhatIf)
+	{
+		Write-Host "Total files archived: $TotalEntries, listing suitable for restoring"
+		$ActivityText = "Listing deleted files"
+	}
+	else
+	{
+		Write-Host "Total files archived: $TotalEntries, restoring"
+		$ActivityText = "Restoring files"
+	}
+	Write-Progress -Activity $ActivityText -PercentComplete 0
 	foreach ($key in $uniques.Keys)
 	{
 		$EntryIndex++
 		if (($EntryIndex - $OldEntryIndex) -gt 1000) # Display progress for each 1K entries to not to consume too much performance
 		{
-			Write-Progress -Activity "Restoring files" -Status "Restored $EntryIndex of $TotalEntries total" -PercentComplete (($EntryIndex * 100) / $TotalEntries)
+			Write-Progress -Activity $ActivityText -Status "File $EntryIndex of $TotalEntries" -PercentComplete (($EntryIndex * 100) / $TotalEntries)
 			$OldEntryIndex = $EntryIndex
 		}
 		$fileprops = $uniques[$key]
 		$mtime = $fileprops['mtime']
-		$fullarchivedpath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($fileprops['archived_name'])
-		$tmp = "$Path\$key"
-		$real_position_path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($tmp)
+		$archivedfile = $fileprops['archived_name']
+		$fullarchivedpath = "$ArchivePath\$archivedfile"
+		$real_position_path = "$Path\$key"
+		
+		if (Test-Path -LiteralPath $real_position_path -PathType Leaf)
+		{
+			# File exists outside of the archive, so it's just a version of non removed file
+			$LoggerStream.Write("File `"$fullarchivedpath`" archived on $mtime exists outside archive and is just a version`n")
+			$CSVStream.Write("`"Version`", `"$real_position_path`", `"$fullarchivedpath`", `"$mtime`"`n")
+			continue
+		}
+		
 		if ($From)
 		{
 			if ($mtime -lt $From)
 			{
 				$LoggerStream.Write("Ignoring (time) `"$fullarchivedpath`" archived on $mtime`n")
+				$CSVStream.Write("`"Ignored`", `"$real_position_path`", `"$fullarchivedpath`", `"$mtime`"`n")
 				continue
 			}
 		}
@@ -303,27 +356,31 @@ try
 			if ($mtime -gt $To)
 			{
 				$LoggerStream.Write("Ignoring (time) `"$fullarchivedpath`" archived on $mtime`n")
+				$CSVStream.Write("`"Ignored`", `"$real_position_path`", `"$fullarchivedpath`", `"$mtime`"`n")
 				continue
 			}
 		}
 		
+		$EntriesToRestore++
 		if ($WhatIf)
 		{
-			$msg = "File `"$real_position_path`" has been deleted. Can be restored from `"$fullarchivedpath`" archived on $mtime"
-			$LoggerStream.Write("$msg`n")
-			Write-Host $msg
+			$LoggerStream.Write("File `"$real_position_path`" has been deleted. Can be restored from `"$fullarchivedpath`" archived on $mtime`n")
+			$CSVStream.Write("`"ToRestore`", `"$real_position_path`", `"$fullarchivedpath`", `"$mtime`"`n")
 		}
 		else
 		{
-			$msg = "Restoring `"$fullarchivedpath`" to `"$real_position_path`" archived on $mtime"
-			$LoggerStream.Write("$msg`n")
-			Write-Host $msg
+			$LoggerStream.Write("Restoring `"$fullarchivedpath`" to `"$real_position_path`" archived on $mtime`n")
+			$CSVStream.Write("`"Restoring`", `"$real_position_path`", `"$fullarchivedpath`", `"$mtime`"`n")
 			EnsurePathExist($real_position_path)
 			Move-Item -LiteralPath $fullarchivedpath -Destination $real_position_path
+			if ($?) { $EntriesSuccessfullyRestored++ }
+			else { $LoggerStream.Write("Error restoring file: `"$($Error[0].Exception.Message)`"`n") }
 		}
 	}
-	Write-Progress -Activity "Restoring files" -Status "Restored $EntryIndex of $TotalEntries total" -Completed
-	
+	Write-Progress -Activity $ActivityText -Status "Restored $EntryIndex of $TotalEntries total" -Completed
+	$msg = "Script planned to restored $EntriesToRestore of $TotalEntries, successfully restored  "
+	Write-Host $msg
+	$LoggerStream.Write("$msg`n")
 }
 catch
 {
@@ -332,6 +389,9 @@ catch
 }
 finally
 {
+	$LoggerStream.Write("Script finished on $(Get-Date -Format G)`n")
 	$LoggerStream.Close()
-	Remove-Module PSSQLite
+	$CSVStream.Close()
+	if (Get-Module PSSQLite) { Remove-Module PSSQLite }
+	Write-Host "Script ended on $(Get-Date -Format G)"
 }
