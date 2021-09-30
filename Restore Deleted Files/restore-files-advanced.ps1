@@ -1,34 +1,4 @@
-﻿[CmdletBinding()]
-param
-(
-	[Parameter(ParameterSetName = 'ByFiles')]
-	[Parameter(ParameterSetName = 'ByDB')]
-	[string]$Path,
-	[Parameter(ParameterSetName = 'ByDB')]
-	[string]$Database,
-	[Parameter(ParameterSetName = 'ByFiles')]
-	[Parameter(ParameterSetName = 'ByDB')]
-	[switch]$WhatIf,
-	[Parameter(ParameterSetName = 'ByFiles')]
-	[Parameter(ParameterSetName = 'ByDB')]
-	[string]$Log,
-	[Parameter(ParameterSetName = 'ByFiles')]
-	[Parameter(ParameterSetName = 'ByDB')]
-	[string]$CSV,
-	[Parameter(ParameterSetName = 'ByFiles')]
-	[Parameter(ParameterSetName = 'ByDB')]
-	[datetime]$From,
-	[Parameter(ParameterSetName = 'ByFiles')]
-	[Parameter(ParameterSetName = 'ByDB')]
-	[datetime]$To,
-	[Parameter(ParameterSetName = 'ByDB')]
-	[switch]$SearchDB,
-	[Parameter(ParameterSetName = 'ByFiles')]
-	[Parameter(ParameterSetName = 'ByDB')]
-	[switch]$SupportLongPath
-)
-
-<#
+﻿<#
 .SYNOPSIS
 The script is intended to restore files from the archive. It either runs thru the .sync/Archive to restore files that do not exist
 outside of the archive or runs thru DB of removed files to restore them.
@@ -73,12 +43,43 @@ restore-files-advanced.ps1 -Path 'c:\TestFolders\FullSync' -Log "restore-fullsyn
 Lists files to be restored in "c:\TestFolders\FullSync" folder. Won't restore anything actually.
 
 .EXAMPLE
-```restore-files-advanced.ps1 -Path 'c:\TestFolders\FullSync' -SearchDB -Database 'C:\ProgramData\Resilio\Connect Agent\4E1DB078C81BFB8D4ED16402E946964CE55D8440.35.db' -From "2021-09-21" -To "2021-09-30"```
+restore-files-advanced.ps1 -Path 'c:\TestFolders\FullSync' -SearchDB -Database 'C:\ProgramData\Resilio\Connect Agent\4E1DB078C81BFB8D4ED16402E946964CE55D8440.35.db' -From "2021-09-21" -To "2021-09-30"
 Restores files for sync folder "c:\TestFolders\FullSync" according to agent's database removed from Sep 21 to Sep 30
 
 .LINK
 https://connect.resilio.com/hc/en-us/articles/115001291284-Understanding-the-Archive-folder
 #>
+
+[CmdletBinding()]
+param
+(
+	[Parameter(ParameterSetName = 'ByFiles')]
+	[Parameter(ParameterSetName = 'ByDB')]
+	[string]$Path,
+	[Parameter(ParameterSetName = 'ByDB')]
+	[string]$Database,
+	[Parameter(ParameterSetName = 'ByFiles')]
+	[Parameter(ParameterSetName = 'ByDB')]
+	[switch]$WhatIf,
+	[Parameter(ParameterSetName = 'ByFiles')]
+	[Parameter(ParameterSetName = 'ByDB')]
+	[string]$Log,
+	[Parameter(ParameterSetName = 'ByFiles')]
+	[Parameter(ParameterSetName = 'ByDB')]
+	[string]$CSV,
+	[Parameter(ParameterSetName = 'ByFiles')]
+	[Parameter(ParameterSetName = 'ByDB')]
+	[datetime]$From,
+	[Parameter(ParameterSetName = 'ByFiles')]
+	[Parameter(ParameterSetName = 'ByDB')]
+	[datetime]$To,
+	[Parameter(ParameterSetName = 'ByDB')]
+	[switch]$SearchDB,
+	[Parameter(ParameterSetName = 'ByFiles')]
+	[Parameter(ParameterSetName = 'ByDB')]
+	[switch]$SupportLongPath
+)
+
 
 
 #---------------------------------------------------------------------------------------------------------------------------------------
