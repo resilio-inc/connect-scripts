@@ -1,25 +1,47 @@
 ﻿[CmdletBinding()]
 param
 (
+	[Parameter(ParameterSetName = 'ByFiles')]
+	[Parameter(ParameterSetName = 'ByDB')]
 	[string]$Path,
+	[Parameter(ParameterSetName = 'ByDB')]
 	[string]$Database,
+	[Parameter(ParameterSetName = 'ByFiles')]
+	[Parameter(ParameterSetName = 'ByDB')]
 	[switch]$WhatIf,
+	[Parameter(ParameterSetName = 'ByFiles')]
+	[Parameter(ParameterSetName = 'ByDB')]
 	[string]$Log,
+	[Parameter(ParameterSetName = 'ByFiles')]
+	[Parameter(ParameterSetName = 'ByDB')]
 	[string]$CSV,
+	[Parameter(ParameterSetName = 'ByFiles')]
+	[Parameter(ParameterSetName = 'ByDB')]
 	[datetime]$From,
+	[Parameter(ParameterSetName = 'ByFiles')]
+	[Parameter(ParameterSetName = 'ByDB')]
 	[datetime]$To,
+	[Parameter(ParameterSetName = 'ByDB')]
 	[switch]$SearchDB,
+	[Parameter(ParameterSetName = 'ByFiles')]
+	[Parameter(ParameterSetName = 'ByDB')]
 	[switch]$SupportLongPath
 )
 
 <#
 .SYNOPSIS
-The script is intended to restore files from the archive. It requires agent v2.12 as it extracts removed records information from database.
-Ensure that the agent is not running when using the script.
+The script is intended to restore files from the archive. It either runs thru the .sync/Archive to restore files that do not exist
+outside of the archive or runs thru DB of removed files to restore them.
 
 .DESCRIPTION
-The script crawls over the "deleted_files2" table from the database corresponding to a job. It only picks records for the files that
-do not exist in synced folder and restores the latest version.
+The script can run in 2 modes: 
+- Basic mode: crawls thru the archive and searching for files that do not exist outside of the archive. This way is old, reliable
+  but unable to restore files of a type "your_rendered_image.1334.exr" as it thinks "1334" is a version in archive and will only
+  restore one of such files.
+- Advanced mode: it gets the information about restored files from agent's database table "deleted_files2". It only picks records 
+  for the files that do not exist in synced folder and restores the latest version. Agent attempts to open database in read-only
+  mode but it is still not recommended to keep the Agent running when opening its database. Copying database together with db-wal
+  file is a viable solution.
 
 .PARAMETER Path
 Path to the synced folder root. Must be absolute
@@ -34,8 +56,28 @@ Set the parameter to only display the files to be restored
 .PARAMETER Log
 Specify the path and a filename for the log file to dump information about files restored
 
+.PARAMETER CSV
+Specify the path and a filename for the CSV file to dump list of files with their status there
+
+.PARAMETER From
+Specify the date in PS DateTime format. String "YYYY-MM-DD HH:mm:ss" works. Script only restores files moved to the archive AFTER (strictly) that date.
+
+.PARAMETER To
+Specify the date in PS DateTime format. String "YYYY-MM-DD HH:mm:ss" works. Script only restores files moved to the archive BEFORE (strictly) that date.
+
+.PARAMETER SupportLongPath
+Set the parameter to prevent script from failing on a long paths (longer than 260 symbols). Requires Powershell 5.1 or newer.
+
+.EXAMPLE
+restore-files-advanced.ps1 -Path 'c:\TestFolders\FullSync' -Log "restore-fullsync-dryrun.log" -CSV "list-of-files.csv" -WhatIf
+Lists files to be restored in "c:\TestFolders\FullSync" folder. Won't restore anything actually.
+
+.EXAMPLE
+```restore-files-advanced.ps1 -Path 'c:\TestFolders\FullSync' -SearchDB -Database 'C:\ProgramData\Resilio\Connect Agent\4E1DB078C81BFB8D4ED16402E946964CE55D8440.35.db' -From "2021-09-21" -To "2021-09-30"```
+Restores files for sync folder "c:\TestFolders\FullSync" according to agent's database removed from Sep 21 to Sep 30
+
 .LINK
-https://github.com/resilio-inc/connect-scripts/tree/master/Restore%20Deleted%20Files
+https://connect.resilio.com/hc/en-us/articles/115001291284-Understanding-the-Archive-folder
 #>
 
 
@@ -226,7 +268,15 @@ if (!([System.IO.Path]::IsPathRooted($Path)))
 }
 
 $Path = $Path.Trim('\')
-if ($SupportLongPath) { $Path = "\\?\$Path" }
+if ($SupportLongPath)
+{
+	if ($PSVersionTable.PSVersion -lt "5.1")
+	{
+		Write-Error "Please update your Powershell to version 5.1 or newer for long paths supprot"
+		return
+	}
+	$Path = "\\?\$Path"
+}
 $uniques = @{ }
 $ArchivePath = "$Path\.sync\Archive"
 $ArhivePathLen = $ArchivePath.Length + 1 # Include traling slash
@@ -253,16 +303,17 @@ try
 			Write-Error "SQLite module `"PSSQlite`" not found and it is mandatory to run the script. Use command `"Install-Module PSSQLite`" to install it in Powershell window with elevated privileges"
 			return
 		}
-		$tmp = Invoke-SqliteQuery -DataSource "$Database" -Query "SELECT name FROM sqlite_master WHERE type='table' AND name='deleted_files2'"
+		$DBConnnection = New-SQLiteConnection -DataSource "$Database" -ReadOnly
+		$tmp = Invoke-SqliteQuery -SQLiteConnection $DBConnnection -Query "SELECT name FROM sqlite_master WHERE type='table' AND name='deleted_files2'"
 		if (!$tmp)
 		{
 			Write-Error "The agent DB is too old and does not support advanced archived files restoring"
 			return
 		}
-		$tmp = Invoke-SqliteQuery -DataSource "$Database" -Query "SELECT COUNT(*) FROM deleted_files2"
+		$tmp = Invoke-SqliteQuery -SQLiteConnection $DBConnnection -Query "SELECT COUNT(*) FROM deleted_files2"
 		$TotalEntries = $tmp.'COUNT(*)'
 		Write-Host "Extracting $TotalEntries entries from database"
-		$ArchivedFiles = Invoke-SqliteQuery -DataSource "$Database" -Query "SELECT * FROM deleted_files2"
+		$ArchivedFiles = Invoke-SqliteQuery -SQLiteConnection $DBConnnection -Query "SELECT * FROM deleted_files2"
 		$EntryIndex = -1
 		$OldEntryIndex = -1
 		Write-Progress -Activity "Checking removed files" -PercentComplete 0
@@ -392,6 +443,10 @@ finally
 	$LoggerStream.Write("Script finished on $(Get-Date -Format G)`n")
 	$LoggerStream.Close()
 	$CSVStream.Close()
-	if (Get-Module PSSQLite) { Remove-Module PSSQLite }
+	if (Get-Module PSSQLite)
+	{
+		$DBConnnection.Close()
+		Remove-Module PSSQLite
+	}
 	Write-Host "Script ended on $(Get-Date -Format G)"
 }
