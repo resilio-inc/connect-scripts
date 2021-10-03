@@ -12,6 +12,14 @@ The script can run in 2 modes:
   for the files that do not exist in synced folder and restores the latest version. Agent attempts to open database in read-only
   mode but it is still not recommended to keep the Agent running when opening its database. Copying database together with db-wal
   file is a viable solution.
+The script can pull the list of jobs, their paths and databases from agent's Storage folder. If you are not using default storage
+folder location - please specify it with -Storage parameter
+
+.PARAMETER JobName
+Specify to pull job path / database from Agent's storage folder. JobName accepts wildcards, so "Full*" will work for "FullSync"
+
+.PARAMETER Storage
+Specify to get job properties from Agent with non-default storage location
 
 .PARAMETER Path
 Path to the synced folder root. Must be absolute
@@ -38,6 +46,9 @@ Specify the date in PS DateTime format. String "YYYY-MM-DD HH:mm:ss" works. Scri
 .PARAMETER SupportLongPath
 Set the parameter to prevent script from failing on a long paths (longer than 260 symbols). Requires Powershell 5.1 or newer.
 
+.PARAMETER ListJobs
+Specify to let script show all jobs that Agent owns. You can use the job name later to get path or database automatically
+
 .EXAMPLE
 restore-files-advanced.ps1 -Path 'c:\TestFolders\FullSync' -Log "restore-fullsync-dryrun.log" -CSV "list-of-files.csv" -WhatIf
 Lists files to be restored in "c:\TestFolders\FullSync" folder. Won't restore anything actually.
@@ -46,13 +57,24 @@ Lists files to be restored in "c:\TestFolders\FullSync" folder. Won't restore an
 restore-files-advanced.ps1 -Path 'c:\TestFolders\FullSync' -SearchDB -Database 'C:\ProgramData\Resilio\Connect Agent\4E1DB078C81BFB8D4ED16402E946964CE55D8440.35.db' -From "2021-09-21" -To "2021-09-30"
 Restores files for sync folder "c:\TestFolders\FullSync" according to agent's database removed from Sep 21 to Sep 30
 
+.EXAMPLE
+restore-files-advanced.ps1 -JobName 'FullSy*' -SearchDB -WhatIf
+Lists files that can be restored for sync job FullSync using agent's database
+
+.EXAMPLE
+restore-files-advanced.ps1 -ListJobs -Storage "F:\ResilioAgent2"
+Lists jobs that secondary Agent (installed with storage path C:\ResilioAgen2) and displays their name and path for later usage with -JobName parameter.
+
 .LINK
 https://connect.resilio.com/hc/en-us/articles/115001291284-Understanding-the-Archive-folder
 #>
 
-[CmdletBinding()]
+[CmdletBinding(DefaultParameterSetName = 'ByFiles')]
 param
 (
+	[Parameter(ParameterSetName = 'ByFiles')]
+	[Parameter(ParameterSetName = 'ByDB')]
+	[string]$JobName,
 	[Parameter(ParameterSetName = 'ByFiles')]
 	[Parameter(ParameterSetName = 'ByDB')]
 	[string]$Path,
@@ -77,7 +99,13 @@ param
 	[switch]$SearchDB,
 	[Parameter(ParameterSetName = 'ByFiles')]
 	[Parameter(ParameterSetName = 'ByDB')]
-	[switch]$SupportLongPath
+	[switch]$SupportLongPath,
+	[Parameter(ParameterSetName = 'ListJobsOnly')]
+	[switch]$ListJobs,
+	[Parameter(ParameterSetName = 'ListJobsOnly')]
+	[Parameter(ParameterSetName = 'ByFiles')]
+	[Parameter(ParameterSetName = 'ByDB')]
+	[string]$Storage
 )
 
 
@@ -191,7 +219,7 @@ Function ConvertFrom-Bencode
 		[parameter(Mandatory = $true, ValueFromPipeline = $true, ParameterSetName = 'FromPipe')]
 		$BencodedData
 	)
-	if ($Path) { $BencodedData = Get-Content $Path -Raw }
+	if ($Path) { $global:bendata = Get-Content $Path -Raw }
 	else { $global:bendata = [System.Text.Encoding]::GetEncoding("Windows-1251").GetString($BencodedData)}
 	$global:Offset = 0
 	$res = Get-BenValue
@@ -253,6 +281,44 @@ function UpdateUniqueList($unique_filename, $modification_time, $archived_filena
 	
 }
 #---------------------------------------------------------------------------------------------------------------------------------------
+
+function Get-FoldersFromInternalConfig
+{
+	param
+	(
+		[string]$Storage,
+		[switch]$UseCached
+	)
+	
+	if ([string]::IsNullOrEmpty($Storage))
+	{
+		$tmp = Get-ItemProperty -path 'HKLM:\SOFTWARE\Resilio, Inc.\Resilio Connect Agent\' -ErrorAction SilentlyContinue
+		if ($tmp)
+		{
+			$Storage = "C:\ProgramData\Resilio\Connect Agent"
+		}
+		$tmp = Get-ItemProperty -path 'HKLM:\SOFTWARE\Resilio Inc.\Resilio Connect Console\' -ErrorAction SilentlyContinue
+		if ($tmp)
+		{
+			$Storage = "C:\ProgramData\Resilio\Connect Server\Agent"
+		}
+	}
+	if ([string]::IsNullOrEmpty($Storage))
+	{
+		Write-Error "Resilio Agent installation not found, specify storage path manually using `"-Storage`" parameter"
+		return
+	}
+	$sync_dat_path = "$Storage\sync.dat"
+	if (!(Test-Path -LiteralPath $sync_dat_path -PathType Leaf))
+	{
+		Write-Error "`"sync.dat`" file not found, likely storage was migrated manually to non-default location. Specify storage path manually using `"-Storage`" parameter."
+		return
+	}
+	
+	return (ConvertFrom-Bencode -Path $sync_dat_path).folders
+}
+
+#---------------------------------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------------------
@@ -261,6 +327,42 @@ Write-Host "Script to restore files from archive v2.2 started on $(Get-Date -For
 $ownscriptpathname = $MyInvocation.MyCommand.Definition
 $ownscriptpath = Split-Path -Path $ownscriptpathname
 $ownscriptname = Split-Path $ownscriptpathname -Leaf
+
+if ($ListJobs) # List jobs in sync.dat
+{
+	$Folders = Get-FoldersFromInternalConfig -Storage $Storage
+	
+	if ($Folders.Length -eq 0)
+	{
+		Write-Host "[No jobs]"
+	}
+	else
+	{
+		$Folders | Format-Table -Property @{ Label = 'Job name'; Expression = { $_.ui_name } }, @{ Label = 'Path'; Expression = { $_.pretty_path } } -AutoSize
+	}
+	return
+}
+
+if (![String]::IsNullOrEmpty($JobName)) # Find job path and database in sync.daat
+{
+	$Folders = Get-FoldersFromInternalConfig -Storage $Storage
+	$MyFolder = $Folders | Where-Object { $_.ui_name -like $JobName }
+	if ($MyFolder.Count -gt 1)
+	{
+		Write-Error "Too many jobs match the name"
+		return
+	}
+	if ($MyFolder.Cound -eq 0)
+	{
+		Write-Error "Job with the name `"$JobName`" not found"
+		return
+	}
+	$Path = $MyFolder.pretty_path
+	$Database = Join-Path -Path $Storage -ChildPath $MyFolder.fc.db_name
+	Write-Host "Found job `"$JobName`":"
+	Write-Host "Path: `"$Path`""
+    Write-Host "Database: `"$Database`""
+}
 
 if (!([System.IO.Path]::IsPathRooted($Path)))
 {
@@ -273,7 +375,7 @@ if ($SupportLongPath)
 {
 	if ($PSVersionTable.PSVersion -lt "5.1")
 	{
-		Write-Error "Please update your Powershell to version 5.1 or newer for long paths supprot"
+		Write-Error "Please update your Powershell to version 5.1 or newer for long paths support"
 		return
 	}
 	$Path = "\\?\$Path"
@@ -430,7 +532,7 @@ try
 		}
 	}
 	Write-Progress -Activity $ActivityText -Status "Restored $EntryIndex of $TotalEntries total" -Completed
-	$msg = "Script planned to restored $EntriesToRestore of $TotalEntries, successfully restored  "
+	$msg = "Script planned to restore $EntriesToRestore of $TotalEntries, successfully restored $EntriesSuccessfullyRestored"
 	Write-Host $msg
 	$LoggerStream.Write("$msg`n")
 }
