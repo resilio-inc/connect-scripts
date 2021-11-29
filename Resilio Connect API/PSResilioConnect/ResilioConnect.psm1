@@ -105,6 +105,8 @@ function Add-GroupToConnectJobObj
 	Specifies path for OS X machines in the group. If Macro specified, the path must be relative.
 	.PARAMETER LinuxPath
 	Specifies path for Linux machines in the group. If Macro specified, the path must be relative.
+	.PARAMETER AndroidPath
+	Specifies path for Android machines in the group. If Macro specified, the path must be relative.
 	.PARAMETER AutoPath
 	Forces to set up all paths automatically equal to job name
 	.PARAMETER Permission
@@ -130,6 +132,7 @@ function Add-GroupToConnectJobObj
 		[string]$WinPath = "",
 		[string]$OsxPath = "",
 		[string]$LinuxPath = "",
+		[string]$AndroidPath = "",
 		[switch]$AutoPath,
 		[ValidateSet("ro", "rw", "sro", "srw")]
 		[Parameter(Mandatory = $true)]
@@ -140,6 +143,7 @@ function Add-GroupToConnectJobObj
 		$WinPath = $ConnectJobObject.name
 		$OsxPath = $ConnectJobObject.name
 		$LinuxPath = $ConnectJobObject.name
+		$AndroidPath = $ConnectJobObject.name
 	}
 	$group = New-Object System.Object
 	$group | Add-Member -NotePropertyName "id" -NotePropertyValue $GroupID
@@ -149,6 +153,7 @@ function Add-GroupToConnectJobObj
 	$resiliopath | Add-Member -NotePropertyName "win" -NotePropertyValue $WinPath
 	$resiliopath | Add-Member -NotePropertyName "osx" -NotePropertyValue $OsxPath
 	$resiliopath | Add-Member -NotePropertyName "linux" -NotePropertyValue $LinuxPath
+	$resiliopath | Add-Member -NotePropertyName "android" -NotePropertyValue $AndroidPath
 	$group | Add-Member -NotePropertyName "path" -NotePropertyValue $resiliopath
 	if (!$ConnectJobObject.groups)
 	{
@@ -181,6 +186,8 @@ function Add-AgentToConnectJobObj
 	Specifies path for the agent if it is OS X machine. If Macro specified, the path must be relative.
 	.PARAMETER LinuxPath
 	Specifies path for the agent if it is Linux machine. If Macro specified, the path must be relative.
+	.PARAMETER AndroidPath
+	Specifies path for the agent if it is Android machine. If Macro specified, the path must be relative.
 	.PARAMETER AutoPath
 	Forces to set up all paths automatically equal to job name
 	.PARAMETER Permission
@@ -208,6 +215,7 @@ function Add-AgentToConnectJobObj
 		[string]$WinPath = "",
 		[string]$OsxPath = "",
 		[string]$LinuxPath = "",
+		[string]$AndroidPath = "",
 		[switch]$AutoPath,
 		[ValidateSet("ro", "rw", "sro", "srw")]
 		[Parameter(Mandatory = $true)]
@@ -218,6 +226,7 @@ function Add-AgentToConnectJobObj
 		$WinPath = $ConnectJobObject.name
 		$OsxPath = $ConnectJobObject.name
 		$LinuxPath = $ConnectJobObject.name
+		$AndroidPath = $ConnectJobObject.name
 	}
 	$agent = New-Object System.Object
 	$agent | Add-Member -NotePropertyName "id" -NotePropertyValue $AgentID
@@ -227,6 +236,7 @@ function Add-AgentToConnectJobObj
 	$resiliopath | Add-Member -NotePropertyName "win" -NotePropertyValue $WinPath
 	$resiliopath | Add-Member -NotePropertyName "osx" -NotePropertyValue $OsxPath
 	$resiliopath | Add-Member -NotePropertyName "linux" -NotePropertyValue $LinuxPath
+	$resiliopath | Add-Member -NotePropertyName "android" -NotePropertyValue $AndroidPath
 	$agent | Add-Member -NotePropertyName "path" -NotePropertyValue $resiliopath
 	if (!$ConnectJobObject.agents)
 	{
@@ -623,6 +633,8 @@ function Add-AgentToJobRun
 	Specify path for OS X machines being added to the job run
 	.PARAMETER LinuxPath 
 	Specify path for Linux machines being added to the job run
+	.PARAMETER AndroidPath 
+	Specify path for Android machines being added to the job run
 	.OUTPUTS
 	The function returns OK or throws exception
 	#>
@@ -637,6 +649,7 @@ function Add-AgentToJobRun
 		[string]$WinPath = "",
 		[string]$OsxPath = "",
 		[string]$LinuxPath = "",
+		[string]$AndroidPath = "",
 		[switch]$AutoPath
 	)
 	BEGIN 
@@ -647,6 +660,7 @@ function Add-AgentToJobRun
 			$WinPath = $JobRun.name
 			$OsxPath = $JobRun.name
 			$LinuxPath = $JobRun.name
+			$AndroidPath = $JobRun.name
 		}
 		
 		if (!$JobRun) { throw "Job run with ID $JobRunID not found" }
