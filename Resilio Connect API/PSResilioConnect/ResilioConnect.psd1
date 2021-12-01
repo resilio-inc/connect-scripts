@@ -109,7 +109,7 @@
 	'Find-Notifications',
 	'Get-Notifications',
 	'Remove-Notification',
-	'Initialize-ConnectJobObj'.
+	'Initialize-ConnectJobObj',
 	'Add-GroupToConnectJobObj',
 	'Add-AgentToConnectJobObj',
 	'Add-ScriptToConnectJobObj',
