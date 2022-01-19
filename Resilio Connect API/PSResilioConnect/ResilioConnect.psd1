@@ -19,7 +19,7 @@
 	RootModule = 'ResilioConnect.psm1'
 	
 	# Version number of this module.
-	ModuleVersion = '2.12.4.3'
+	ModuleVersion = '2.12.4.4'
 	
 	# ID used to uniquely identify this module
 	GUID = '295f76f4-3447-4b77-9571-780625279be6'
@@ -37,7 +37,7 @@
 	Description = 'Management Console API wrapper'
 	
 	# Minimum version of the Windows PowerShell engine required by this module
-	PowerShellVersion = '4.0'
+	PowerShellVersion = '5.1'
 	
 	# Name of the Windows PowerShell host required by this module
 	PowerShellHostName = ''
