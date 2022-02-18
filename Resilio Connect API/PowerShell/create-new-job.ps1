@@ -1,39 +1,39 @@
-$MCHost = "https://127.0.0.1:8443"
-$token = "XXX"
-$JSON = '
-{
-    "name": "Sync job",
-    "description": "My sample job",
-    "type": "sync",
-    "settings": {
-        "priority": 5
-    },
-    "profile_id": 2,
-    "agents": [{
-            "id": 1,
-            "permission": "rw",
-            "path": {
-                "linux": "source",
-                "win": "C:\\Test",
-                "osx": "source"
-            }
-        }, {
-            "id": 2,
-            "permission": "rw",
-            "path": {
-                "linux": "source",
-                "win": "D:\\Test",
-                "osx": "source"
-            }
-        }
-    ]
-}
-'
+# Fill in your MC host and port
+$MCHost = "https://<managemt_console_ip_or_dns>:8443"
+$APIToken = "<your_API_token_here>"
 
-######################## Ignoring cert check error callback #######################
-# Please note that this callback is only necessary for Powershell v5.1 and older
-# Starting from PS v6.0 you can just add a switch " -SkipCertificateCheck" to
-# your Invoke-RestMethod cmdlet
+$JobObject = [PSCustomObject]@{
+	name	    = "SyncJob by Powershell"
+	description = "Job description"
+	type	    = "sync"
+	settings    = [PSCustomObject]@{
+		use_ram_optimization = $true
+		reference_agent_id = 400
+	}
+	profile_id  = 2
+	agents	    = @(
+		[PSCustomObject]@{
+			id = 320
+			permission = "rw"
+			path	   = [PSCustomObject]@{
+				linux = ""
+				win = "C:\TestFolders\test2"
+				osx = ""
+			}
+		}
+		[PSCustomObject]@{
+			id		   = 400
+			permission = "rw"
+			path	   = [PSCustomObject]@{
+				linux = ""
+				win   = "C:\TestFolders\test2"
+				osx   = ""
+			}
+		}
+	)
+}
+
+######################## Ignoring cert check error callback #####################
 add-type @"
     using System.Net;
     using System.Security.Cryptography.X509Certificates;
@@ -49,7 +49,7 @@ add-type @"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Ssl3, [Net.SecurityProtocolType]::Tls, [Net.SecurityProtocolType]::Tls11, [Net.SecurityProtocolType]::Tls12
 ####################################################################################
 
+# Use depth 10 to ensure you convert even the deepest entries into JOSN
+$JSON = $JobObject | ConvertTo-Json -Depth 10
 
-$response = Invoke-RestMethod -Method POST -Uri "$MCHost/api/v2/jobs" -Headers @{ "Authorization" = "Token $token" } -ContentType "Application/json" -Body:$JSON -ErrorAction Stop
-
-Write-Output "API response was: $response"
+Invoke-RestMethod -Method "POST" -Uri "$MCHost/api/v2/jobs" -Headers @{ "Authorization" = "Token $APIToken" } -ContentType "Application/json" -Body $JSON
