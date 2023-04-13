@@ -312,11 +312,17 @@ function Verify-UpgradePossible
 		$fullupgradeablepath = Join-Path -Path $ownscriptpath -ChildPath $agentupgradeble
 		[System.Version]$oldversion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("$fullexepath").FileVersion
 		[System.Version]$newversion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("$fullupgradeablepath").FileVersion
-		if ($oldversion -gt $newversion)
+		
+		if ($oldversion.Build -lt 10000)
 		{
-			$errcode = 15
-			throw "Attempted to downgrade from $oldversion to $newversion, downgrade is not supported"
+			if ($oldversion -gt $newversion)
+			{
+				$errcode = 15
+				throw "Attempted to downgrade from $oldversion to $newversion, downgrade is not supported"
+			}
 		}
+		else { Write-Verbose "Skipping downgrade verification check since exising Agent installation is a custom build" }
+		
 		if ($oldversion -eq $newversion)
 		{
 			Write-Verbose "Same version detected, no point in launching upgrade"
