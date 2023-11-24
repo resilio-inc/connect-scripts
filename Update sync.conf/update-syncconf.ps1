@@ -26,6 +26,12 @@ Specifies new server certificate fingerprint to be set into your sync.conf
 .PARAMETER NewStoragePath
 Specifies new storage path to be set into your sync.conf
 
+.PARAMETER DisableCertCheck
+Sets parameter in the sync.conf that forces agent to skip MC certificate verification
+
+.PARAMETER EnableCertCheck
+Sets parameter in the sync.conf that forces agent to conduct MC certificate verification
+
 .PARAMETER CustomParameterName
 Specifies custom parameter name to be inserted / changed into your sync.conf
 
@@ -80,6 +86,10 @@ Param (
 	[string]$NewFingerprint,
 	[Parameter(ParameterSetName = 'changestandard')]
 	[string]$NewStoragePath,
+	[Parameter(ParameterSetName = 'changestandard')]
+	[switch]$DisableCertCheck,
+	[Parameter(ParameterSetName = 'changestandard')]
+	[switch]$EnableCertCheck,
 	[Parameter(ParameterSetName = 'addcustom')]
 	[Parameter(ParameterSetName = 'removecustom')]
 	[string]$CustomParameterName,
@@ -211,6 +221,8 @@ try
 	
 	Write-Verbose "Updating standard parameters if necessary"
 	if ($NewBootstrap) { $syncconf.management_server.bootstrap_token = $NewBootstrap }
+	if ($DisableCertCheck) { $syncconf.management_server.disable_cert_check = $true }
+	if ($EnableCertCheck) { $syncconf.management_server.disable_cert_check = $false }
 	if ($NewHost) { $syncconf.management_server.host = $NewHost }
 	if ($NewFingerprint) { $syncconf.management_server.cert_authority_fingerprint = $NewFingerprint }
 	if ($NewStoragePath) { $syncconf.folders_storage_path = $NewStoragePath }
