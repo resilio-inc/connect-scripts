@@ -186,7 +186,7 @@ $xmlpart2 = '" -PerformGracefulRestart</Arguments>
 Write-Verbose "Script started"
 
 # Define own paths and names
-$ownscriptpathname = Join-Path -path ((Resolve-Path $MyInvocation.InvocationName).Path) -ChildPath $MyInvocation.MyCommand.Name
+$ownscriptpathname = $MyInvocation.MyCommand.Definition
 $ownscriptpath = Split-Path -Path $ownscriptpathname
 $ownscriptname = Split-Path $ownscriptpathname -Leaf
 

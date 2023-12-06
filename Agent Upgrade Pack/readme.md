@@ -16,7 +16,7 @@ The script is actually doing an upgrade, which includes:
 * Installation of Task Scheduler task which performs the upgrade
 * Stopping the service (and automatically killing it if can't stop for 10 minutes)
 * Replacing the binary with a new one
-* Migrating storage folder if upgrade is done from pre-2.5 to 2.5 
+* Migrating storage folder if upgrade is done from pre-2.5 to 2.5+
 * Supplying proper permissions for the new storage folder
 * Starting the service
 * Updating Explorer extensions to the new one (with explorer automatic restart)

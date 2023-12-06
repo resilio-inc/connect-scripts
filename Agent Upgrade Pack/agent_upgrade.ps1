@@ -18,7 +18,7 @@ If done via Connect Job, upgrade script should advised to be started by TaskSche
 completely detach from launching agent. The script can start from any folder. Script expects next 
 files to be present in the script folder: 
   oldstorage.path" - should contain path to current storage folder. Used when migrating 2.4 agent
-                     to 2.5 agent
+                     to 2.5 or newer agent
   Resilio-Connect-Agent.exe - x86 version of executable. (only for x86 Win upgrades)
   Resilio-Connect-Agent_x64.exe - x64 version of executable (only for x64 Win upgrades)
 
