@@ -1,5 +1,12 @@
-rem Use -NoX86exeCheck parameter in "...agent_upgrade.ps1 -Verify..." call if you dont have any 32-bit machines to upgrade
-rem Use -NoExtensionUpgrade parameter in "...agent_upgrade.ps1 -CreateUpgradeTask..." call to not to upgrade Explorer extensions for selective sync 
+rem ---------------- Script updated on 2021-08-18 --------------------------
+rem Uncomment the line below to prevent script from checking free disk space required for upgrade
+rem set DontCheckDiskSpace="-NoDiskSpaceCheck"
+
+rem Uncomment the line below if you dont have any 32-bit machines to upgrade
+rem set DontCheckFor32bitBinary="-NoX86exeCheck"
+
+rem Uncomment the line below to skip upgrading Explorer extensions for legacy selective sync 
+rem set DontUpgradeExtension="-NoExtensionUpgrade"
 
 powershell.exe -NoProfile -Command "$PSVersionTable.PSVersion.Major" > ps.version
 set /p PSVER=<ps.version
@@ -21,23 +28,23 @@ echo agent_upgrade.ps1 script is actually an HTML page, please re-download from 
 exit /b 18
 )
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File agent_upgrade.ps1 -Verify > verify.log 2>&1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File agent_upgrade.ps1 -Verify %DontCheckFor32bitBinary% %DontCheckDiskSpace% > verify.log 2>&1
 
 set ERR=%ERRORLEVEL%
 
+type verify.log
+
 if %ERR%==1 (
 echo No need to upgrade, same version detected
-type verify.log
 exit /b 0
 )
 
 if %ERR% GEQ 2 (
-type verify.log
 exit /b %ERR%
 )
 
 echo %APPDATA%\Resilio Connect Agent Service>oldstorage.path
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File agent_upgrade.ps1 -CreateUpgradeTask
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File agent_upgrade.ps1 -CreateUpgradeTask %DontUpgradeExtension%
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File agent_upgrade.ps1 -RunUpgradeTask
  

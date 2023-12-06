@@ -17,16 +17,13 @@ import signal
 import subprocess
 import sys
 import time
+import stat
 
 
 management_server_args = ['bootstrap_token',
                           'cert_authority_fingerprint',
                           'disable_cert_check',
                           'host']
-
-launch_daemon_path = '/Library/LaunchDaemons/com.resilio.agent.plist'
-agent_daemon_config = '/Users/resilioagent/Library/Application Support/Resilio Connect Agent/sync.conf'
-agent_process_name = 'Resilio Connect Agent.app/Contents/MacOS/Resilio Connect Agent'
 
 
 def main():
@@ -115,11 +112,9 @@ def process_tasks(config, args):
 
 def restart_agent():
     logging.info('Attempting to restart Resilio Connect Agent in 2 minutes')
-    initialize_cron()
-    stop_agent()
+    change_permissions()
     time.sleep(5)
-    start_agent()
-
+    automator_restart()
 
 def restart_agent_daemon():
     stop_agent_daemon()
@@ -156,13 +151,12 @@ def initialize_cron():
     subprocess.Popen(cmd, shell=True)
 
 
-def stop_agent():
-    cmd = """(crontab -l ; echo \'* * * * * echo "STOP_RSL_AGENT" ; osascript -e "quit app \\\"Resilio Connect Agent\\\"" ; crontab -l | grep -v \'STOP_RSL_AGENT\' | crontab\')| crontab \-"""
-    subprocess.Popen(cmd, shell=True)
+def change_permissions():
+    st = os.stat('restart_agent_detached.app/Contents/MacOS/Application Stub')
+    os.chmod('restart_agent_detached.app/Contents/MacOS/Application Stub', st.st_mode | stat.S_IEXEC)
 
-
-def start_agent():
-    cmd = "(crontab -l ; echo \"*/2 * * * * open '/Applications/Resilio Connect Agent.app' ; crontab -l | grep -v 'Applications/Resilio Connect Agent.app' | crontab\")| crontab \-"
+def automator_restart():
+    cmd = ("open restart_agent_detached.app")
     subprocess.Popen(cmd, shell=True)
 
 

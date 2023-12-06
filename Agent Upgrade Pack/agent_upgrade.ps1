@@ -3,6 +3,7 @@ param
 (
 	[switch]$NoX86exeCheck,
 	[switch]$NoExtensionUpgrade,
+	[switch]$NoDiskSpaceCheck,
 	[switch]$Verify,
 	[switch]$CreateUpgradeTask,
 	[switch]$RunUpgradeTask
@@ -327,11 +328,35 @@ function Verify-UpgradePossible
 			Write-Verbose "Same version detected, no point in launching upgrade"
 			$errcode = 1
 		}
+		else { Write-Verbose "[OK]" }
+		######### Check 5 - Calculate if disk space is enough for the upgrade
+		if (!$NoDiskSpaceCheck)
+		{
+			Write-Verbose "Checking total size of estimated backup..."
+			$storagepath = "$env:ProgramData\Resilio\Connect Agent\"
+			[int64]$totalsize = 0
+			$totalsize += (Get-Item "$storagepath\settings.dat" -ErrorAction SilentlyContinue).Length
+			$totalsize += (Get-Item "$storagepath\sync.dat" -ErrorAction SilentlyContinue).Length
+			$databases = Get-ChildItem -Path $storagepath -Filter *.db*
+			foreach ($databasefile in $databases)
+			{
+				$totalsize += $databasefile.Length
+			}
+			$storagedrive = (Get-Item $storagepath).PSDrive.Name
+			$driveproperties = (Get-CimInstance -Class CIM_LogicalDisk | Select-Object * | Where-Object { $_.DriveType -eq '3' -or $_.DriveType -eq '4' } | Where-Object {$_.Name -eq "$($storagedrive):"}) 4>$null
+			if ($driveproperties.FreeSpace -lt $totalsize)
+			{
+				$errcode = 19
+				throw "Insufficiend disk space. Drive $($storagedrive): has $($driveproperties.FreeSpace) free space, $totalsize required for backup"
+			}
+			Write-Verbose "[OK]"
+		}
+		else { Write-Verbose "Bypassing disk space check as requested" }
+		
 		# If no errors found, we can report that the upgrade will happen
 		if ($errcode -eq 0)
 		{
-			Write-Verbose "Upgrading from $oldversion to $newversion"
-			Write-Verbose "[OK]"
+			Write-Verbose "Agent can be upgraded from $oldversion to $newversion"
 		}
 	}
 	catch
@@ -463,6 +488,9 @@ try
 		Stop-Process -Name $processname -Force
 		Write-Verbose "Agent service failed to stop, killing process"
 	}
+	
+	# Now kill all the rest of agents which are actually UI processes
+	Get-Process -Name "Resilio Connect Agent" | Stop-Process -Force
 	
 	# Rename old executable
 	Move-Item -Path "$fullexepath" -Destination "$fullexepath.old" -Force
