@@ -432,6 +432,7 @@ try
 	$agentupgradeablex64 = "Resilio-Connect-Agent_x64.exe"
 	$extensionx86 = "SyncShellContextMenu_x86.dll"
 	$extensionx64 = "SyncShellContextMenu_x64.dll"
+	$fldrivermsix64 = "Resilio-File-Locking-Driver_x64.msi"
 	$newstoragepath = "$env:ProgramData\Resilio\Connect Agent\"
 	$processpath = (Get-ItemProperty -path 'HKLM:\SOFTWARE\Resilio, Inc.\Resilio Connect Agent\').InstallDir
 	Write-Verbose "Found Agent installed to: $processpath"
@@ -569,6 +570,17 @@ try
 		else
 		{
 			Write-Verbose "No user logged in, explorer restart is not required"
+		}
+	}
+
+	# Upgrade file locking driver
+	if ($ExeArchitecture -eq 'x64')
+	{
+		$fullfldrivermsix64 = Join-Path -Path $ownscriptpath -ChildPath $fldrivermsix64
+		if ([System.IO.File]::Exists("$fullfldrivermsix64"))
+		{
+			Write-Verbose "Installing file locking driver"
+			Start-Process -FilePath "msiexec" -ArgumentList "/quiet /norestart /i `"$fullfldrivermsix64`""
 		}
 	}
 }
