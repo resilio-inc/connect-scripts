@@ -3,6 +3,7 @@ param
 (
 	[switch]$NoX86exeCheck,
 	[switch]$NoExtensionUpgrade,
+	[switch]$NoFLDriverUpgrade,
 	[switch]$NoDiskSpaceCheck,
 	[switch]$Verify,
 	[switch]$CreateUpgradeTask,
@@ -21,6 +22,7 @@ files to be present in the script folder:
                      to 2.5 or newer agent
   Resilio-Connect-Agent.exe - x86 version of executable. (only for x86 Win upgrades)
   Resilio-Connect-Agent_x64.exe - x64 version of executable (only for x64 Win upgrades)
+  Resilio-File-Locking-Driver_x64.msi - file locking driver msi package
 
 Proper version is selected automatically.
 
@@ -54,6 +56,9 @@ via Task Scheduler service is mandatory to detach from Agent's command prompt.
 
 .PARAMETER NoExtensionUpgrade
 Prevents script from upgrading Explorer extensions (used for selective sync)
+
+.PARAMETER NoFLDriverUpgrade
+Prevents script from upgrading file locking driver
 
 .LINK
 https://github.com/resilio-inc/connect-scripts/tree/master/Agent%20Upgrade%20Pack
@@ -258,7 +263,32 @@ function Verify-UpgradePossible
 			$filecheckfailure = $true
 			$errcode = 3
 		}
-				
+
+		$filelockingenabled = Get-FileLockingFeatureEnabled -AgentFileNameX64 "Resilio-Connect-Agent_x64.exe"
+		if ($filelockingenabled)
+		{
+			if (!(Test-Path "Resilio-File-Locking-Driver_x64.msi" -PathType Leaf))
+			{
+				if (!$NoFLDriverUpgrade)
+				{
+					Write-Verbose "Resilio-File-Locking-Driver_x64.msie file is missing"
+					$filecheckfailure = $true
+					$errcode = 20
+				}
+				else
+				{
+					Write-Verbose "Bypassing file locking driver check as requested"
+				}
+			}
+		}
+		else
+		{
+			if (Test-Path "Resilio-File-Locking-Driver_x64.msi" -PathType Leaf)
+			{
+				Write-Verbose "Skipping driver upgrade as agent doesn't support file locking"
+			}
+		}
+
 		if ($filecheckfailure)
 		{
 			throw "Some files are missing or paths are invalid, upgrade impossile"
@@ -312,7 +342,7 @@ function Verify-UpgradePossible
 		$fullupgradeablepath = Join-Path -Path $ownscriptpath -ChildPath $agentupgradeble
 		[System.Version]$oldversion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("$fullexepath").FileVersion
 		[System.Version]$newversion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("$fullupgradeablepath").FileVersion
-		
+
 		if ($oldversion.Build -lt 10000)
 		{
 			if ($oldversion -gt $newversion)
@@ -323,12 +353,52 @@ function Verify-UpgradePossible
 		}
 		else { Write-Verbose "Skipping downgrade verification check since exising Agent installation is a custom build" }
 		
-		if ($oldversion -eq $newversion)
+		[System.Version]$newfldriverversion = $Null
+		[System.Version]$oldfldriverversion = $Null
+
+		if (!$NoFLDriverUpgrade)
 		{
-			Write-Verbose "Same version detected, no point in launching upgrade"
-			$errcode = 1
+			$msifldriverfullpath = Join-Path -Path $ownscriptpath -ChildPath "Resilio-File-Locking-Driver_x64.msi"
+			$msifldriverversion = Get-MsiProductVersion -MsiPath $msifldriverfullpath
+			if ($msifldriverversion -ne $newversion)
+			{
+				$errcode = 21
+				throw "File locking driver msi must have the same version as the agent, found $msifldriverversion, expected $newversion"
+			}
+
+			$oldfldriverpath = Join-Path -Path $processpath -ChildPath 'rsldrv\rsldrv.sys'
+			if ([System.IO.File]::Exists("$oldfldriverpath"))
+			{
+				$oldfldriverversion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("$oldfldriverpath").FileVersion
+			}
+
+			$newfldriverversion = Get-MsiFileVersion -MsiPath $msifldriverfullpath -FileName "rsldrv.sys"
 		}
-		else { Write-Verbose "[OK]" }
+
+		if (!$filelockingenabled)
+		{
+			if ($oldversion -eq $newversion)
+			{
+				Write-Verbose "Same version detected, no point in launching upgrade"
+				$errcode = 1
+			}
+			else { Write-Verbose "[OK]" }
+		}
+		else
+		{
+			if ($NoFLDriverUpgrade -and $oldversion -eq $newversion)
+			{
+				Write-Verbose "Same version detected, no point in launching upgrade"
+				$errcode = 1
+			}
+			elseif (!$NoFLDriverUpgrade -and ($oldversion -eq $newversion) -and ($newfldriverversion -eq $oldfldriverversion))
+			{
+				Write-Verbose "Same versions detected, no point in launching upgrade"
+				$errcode = 1
+			}
+			else { Write-Verbose "[OK]" }
+		}
+
 		######### Check 5 - Calculate if disk space is enough for the upgrade
 		if (!$NoDiskSpaceCheck)
 		{
@@ -352,11 +422,18 @@ function Verify-UpgradePossible
 			Write-Verbose "[OK]"
 		}
 		else { Write-Verbose "Bypassing disk space check as requested" }
-		
+
 		# If no errors found, we can report that the upgrade will happen
 		if ($errcode -eq 0)
 		{
-			Write-Verbose "Agent can be upgraded from $oldversion to $newversion"
+			if ($oldversion -ne $newversion)
+			{
+				Write-Verbose "Agent can be upgraded from $oldversion to $newversion"
+			}
+			else
+			{
+				Write-Verbose "Only file locking driver can be upgraded"
+			}
 		}
 	}
 	catch
@@ -382,6 +459,73 @@ function Get-BinaryArchitecture
 	
 	if ($Arch -eq 0x014c) { return "x86" }
 	if ($Arch -eq 0x0200 -or $Arch -eq 0x8664) { return "x64" }
+}
+
+# --------------------------------------------------------------------------------------------------------------------------------
+
+function Get-MsiProductVersion
+{
+	param
+	(
+		[parameter(Mandatory = $true)]
+		[string]$MsiPath
+	)
+
+	[int]$msiOpenDatabaseMode = 0
+	$inst = new-object -comobject WindowsInstaller.Installer
+	$db = $inst.GetType().InvokeMember("OpenDatabase", "InvokeMethod", $Null, $inst, @($MsiPath, $msiOpenDatabaseMode))
+	$view = $db.GetType().InvokeMember("OpenView", "InvokeMethod", $Null, $db, @("SELECT `Value` FROM `Property` WHERE `Property` = 'ProductVersion'"))
+	$view.GetType().InvokeMember("Execute", "InvokeMethod", $Null, $view, $Null) | Out-Null
+	$record = $view.GetType().InvokeMember("Fetch", "InvokeMethod", $Null, $view, $Null)
+	$ver = $record.GetType().InvokeMember("StringData", "GetProperty", $null, $record, 1)
+	$view.GetType().InvokeMember("Close", "InvokeMethod", $null, $view, $null) | Out-Null
+	return [System.Version]$ver
+}
+
+# --------------------------------------------------------------------------------------------------------------------------------
+
+function Get-MsiFileVersion
+{
+	param
+	(
+		[parameter(Mandatory = $true)]
+		[string]$MsiPath,
+		[parameter(Mandatory = $true)]
+		[string]$FileName
+	)
+
+	[int]$msiOpenDatabaseMode = 0
+	$inst = new-object -comobject WindowsInstaller.Installer
+	$db = $inst.GetType().InvokeMember("OpenDatabase", "InvokeMethod", $Null, $inst, @($MsiPath, $msiOpenDatabaseMode))
+	$view = $db.GetType().InvokeMember("OpenView", "InvokeMethod", $Null, $db, @("SELECT `Version` FROM `File` WHERE `FileName` = '$FileName'"))
+	$view.GetType().InvokeMember("Execute", "InvokeMethod", $Null, $view, $Null) | Out-Null
+	$record = $view.GetType().InvokeMember("Fetch", "InvokeMethod", $Null, $view, $Null)
+	$ver = $record.GetType().InvokeMember("StringData", "GetProperty", $null, $record, 1)
+	$view.GetType().InvokeMember("Close", "InvokeMethod", $null, $view, $null) | Out-Null
+	return [System.Version]$ver
+}
+
+# --------------------------------------------------------------------------------------------------------------------------------
+
+function Get-FileLockingFeatureEnabled
+{
+	param
+	(
+		[parameter(Mandatory = $false)]
+		[string]$AgentFileNameX64,
+		[parameter(Mandatory = $false)]
+		[System.Version]$NewAgentVersion
+	)
+
+	if ($AgentFileNameX64)
+	{
+		if ([System.IO.File]::Exists("$AgentFileNameX64"))
+		{
+			$NewAgentVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("$AgentFileNameX64").FileVersion
+		}
+	}
+	$featureEnabled = $NewAgentVersion -gt [System.Version]"4.1.0.0"
+	return $featureEnabled
 }
 
 # --------------------------------------------------------------------------------------------------------------------------------
@@ -461,6 +605,7 @@ try
 	[System.Version]$newversion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("$fullupgradeablepath").FileVersion
 	$fullextx86path = Join-Path -Path $processpath -ChildPath $extensionx86
 	$fullextx64path = Join-Path -Path $processpath -ChildPath $extensionx64
+	$filelockingenabled = Get-FileLockingFeatureEnabled -NewAgentVersion $newversion
 	
 	Write-Verbose "Currently installed verison of agent is: $oldversion"
 	Write-Verbose "Going to upgrade to agent verison: $newversion"
@@ -574,13 +719,17 @@ try
 	}
 
 	# Upgrade file locking driver
-	if ($ExeArchitecture -eq 'x64')
+	if ($filelockingenabled)
 	{
-		$fullfldrivermsix64 = Join-Path -Path $ownscriptpath -ChildPath $fldrivermsix64
-		if ([System.IO.File]::Exists("$fullfldrivermsix64"))
+		if ($ExeArchitecture -eq 'x64')
 		{
-			Write-Verbose "Installing file locking driver"
-			Start-Process -FilePath "msiexec" -ArgumentList "/quiet /norestart /i `"$fullfldrivermsix64`""
+			$fullfldrivermsix64 = Join-Path -Path $ownscriptpath -ChildPath $fldrivermsix64
+			if ([System.IO.File]::Exists("$fullfldrivermsix64"))
+			{
+				Write-Verbose "Installing file locking driver"
+				$msiresult = (Start-Process -FilePath "msiexec" -ArgumentList "/quiet /norestart /i `"$fullfldrivermsix64`"" -wait -passthru).ExitCode
+				Write-Verbose "Driver installation finished with result $msiresult"
+			}
 		}
 	}
 }
