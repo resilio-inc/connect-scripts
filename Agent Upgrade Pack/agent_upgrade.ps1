@@ -546,8 +546,9 @@ if ($Verify)
 # Just register self as a task scheduler
 if ($CreateUpgradeTask)
 {
-	if ($NoExtensionUpgrade) { $AgentUpgradeXML = "$upgradexmlpart1`"$ownscriptpathname`" -NoExtensionUpgrade -Verbose$upgradexmlpart2" }
-	else { $AgentUpgradeXML = "$upgradexmlpart1`"$ownscriptpathname`" -Verbose$upgradexmlpart2"}
+	if ($NoExtensionUpgrade) { $passedParams += " -NoExtensionUpgrade" }
+	if ($NoFLDriverUpgrade) { $passedParams += " -NoFLDriverUpgrade" }
+	$AgentUpgradeXML = "$upgradexmlpart1`"$ownscriptpathname`" $passedParams -Verbose$upgradexmlpart2"
 	Set-Content -Path "ResilioUpgrade.xml" -Value $AgentUpgradeXML
 	Start-Process -FilePath "schtasks" -ArgumentList "/create /TN ResilioUpgrade /XML ResilioUpgrade.xml /F"
 	exit 0
@@ -605,8 +606,12 @@ try
 	[System.Version]$newversion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("$fullupgradeablepath").FileVersion
 	$fullextx86path = Join-Path -Path $processpath -ChildPath $extensionx86
 	$fullextx64path = Join-Path -Path $processpath -ChildPath $extensionx64
-	$filelockingenabled = Get-FileLockingFeatureEnabled -NewAgentVersion $newversion
-	
+
+	if (!$NoFLDriverUpgrade)
+	{
+		$filelockingenabled = Get-FileLockingFeatureEnabled -NewAgentVersion $newversion
+	}
+
 	Write-Verbose "Currently installed verison of agent is: $oldversion"
 	Write-Verbose "Going to upgrade to agent verison: $newversion"
 	
