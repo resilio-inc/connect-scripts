@@ -38,7 +38,7 @@ During verification step the script verifies if all the pre-requisites are met t
 | 17            | Powershell version is below 4.0, automatic upgrade is not possible                          |
 | 18            | agent_upgrade.ps1 file is damaged (actually, it is HTML page, not a PS script)              |
 | 19            | Disk space with storage folder is insufficient for the upgrade                              |
-| 20            | Resilio-File-Locking-Driver_x64.msie file is missing                                        |
+| 20            | Resilio-File-Locking-Driver_x64.msi  file is missing                                        |
 | 21            | File locking msi package has different version than new agent binary                        |
 
 If you don't see your error code in the table above, update your Agent Upgrade Pack.

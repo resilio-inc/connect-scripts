@@ -271,7 +271,7 @@ function Verify-UpgradePossible
 			{
 				if (!$NoFLDriverUpgrade)
 				{
-					Write-Verbose "Resilio-File-Locking-Driver_x64.msie file is missing"
+					Write-Verbose "Resilio-File-Locking-Driver_x64.msi file is missing"
 					$filecheckfailure = $true
 					$errcode = 20
 				}
