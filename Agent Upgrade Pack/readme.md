@@ -38,12 +38,15 @@ During verification step the script verifies if all the pre-requisites are met t
 | 17            | Powershell version is below 4.0, automatic upgrade is not possible                          |
 | 18            | agent_upgrade.ps1 file is damaged (actually, it is HTML page, not a PS script)              |
 | 19            | Disk space with storage folder is insufficient for the upgrade                              |
+| 20            | Resilio-File-Locking-Driver_x64.msi  file is missing                                        |
+| 21            | File locking msi package has different version than new agent binary                        |
 
 If you don't see your error code in the table above, update your Agent Upgrade Pack.
 If error code is higher than zero, log of the verification is dumped to "verify.log" file next to the script. 
 If you do not plan to deploy any x86 machines upgrade, specify `-NoX86exeCheck` switch in the call `agent_upgrade.ps1 ... -Verify`.
 If you do not want to verify the disk space before the upgrade, specify `-NoDiskSpaceCheck` switch in the call `agent_upgrade.ps1 ... -Verify`.
 If you do not plan to upgrade explorer extensions, specify `-NoExtensionUpgrade` switch in the call `agent_upgrade.ps1 ... -CreateUpgradeTask`.
+If you do not plan to upgrade file locking driver, specify `-NoFLDriverUpgrade` switch in the call `agent_upgrade.ps1 ... -CreateUpgradeTask`.
 
 During the upgrade step the script drops upgrade.log in same directory it resides.
 
