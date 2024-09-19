@@ -1,14 +1,8 @@
-rem ---------------- Script updated on 2021-08-18 --------------------------
+rem ---------------- Script updated on 2024-09-17 --------------------------
 rem Uncomment the line below to prevent script from checking free disk space required for upgrade
 rem set DontCheckDiskSpace="-NoDiskSpaceCheck"
 
-rem Uncomment the line below if you dont have any 32-bit machines to upgrade
-rem set DontCheckFor32bitBinary="-NoX86exeCheck"
-
-rem Uncomment the line below to skip upgrading Explorer extensions for legacy selective sync 
-rem set DontUpgradeExtension="-NoExtensionUpgrade"
-
-rem Uncomment the line below to skip upgrading file locking driver
+rem Uncomment the line below to skip upgrading (installing) file locking driver
 rem set DontUpgradeFLDriver="-NoFLDriverUpgrade"
 
 powershell.exe -NoProfile -Command "$PSVersionTable.PSVersion.Major" > ps.version
@@ -31,7 +25,7 @@ echo agent_upgrade.ps1 script is actually an HTML page, please re-download from 
 exit /b 18
 )
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File agent_upgrade.ps1 -Verify %DontCheckFor32bitBinary% %DontCheckDiskSpace% %DontUpgradeFLDriver% > verify.log 2>&1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File agent_upgrade.ps1 -Verify -NoX86exeCheck %DontCheckDiskSpace% %DontUpgradeFLDriver% > verify.log 2>&1
 
 set ERR=%ERRORLEVEL%
 
@@ -48,6 +42,6 @@ exit /b %ERR%
 
 echo %APPDATA%\Resilio Connect Agent Service>oldstorage.path
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File agent_upgrade.ps1 -CreateUpgradeTask %DontUpgradeExtension% %DontUpgradeFLDriver%
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File agent_upgrade.ps1 -CreateUpgradeTask -NoExtensionUpgrade %DontUpgradeFLDriver%
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File agent_upgrade.ps1 -RunUpgradeTask
  
