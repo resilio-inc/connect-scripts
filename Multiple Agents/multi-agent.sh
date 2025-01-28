@@ -117,7 +117,7 @@ case $COMMAND in
 
   disable)
     echo "Disabling all enabled resilio-multi-agent services..."
-    for service in $(systemctl list-unit-files | grep enabled | grep resilio-multi-agent@ | awk '{print $1}'); do
+    for service in $(systemctl list-units --type=service | grep enabled | grep resilio-multi-agent@ | awk '{print $1}'); do
       echo "Disabling $service..."
       systemctl disable $service
     done
