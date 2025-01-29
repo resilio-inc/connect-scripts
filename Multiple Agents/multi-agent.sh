@@ -90,6 +90,10 @@ case $COMMAND in
       echo "Error: You must specify the number of agents to start."
       exit 1
     fi
+    if [[ $PARAM -eq 0 ]]; then
+      echo "Error: The amount of agents cannot be zero."
+      exit 1
+    fi
     for ((i=1; i<=PARAM; i++)); do
       echo "Starting resilio-multi-agent@$i..."
       systemctl start resilio-multi-agent@$i
@@ -107,6 +111,10 @@ case $COMMAND in
   enable)
     if [[ -z $PARAM || ! $PARAM =~ ^[0-9]+$ ]]; then
       echo "Error: You must specify the number of agents to enable."
+      exit 1
+    fi
+    if [[ $PARAM -eq 0 ]]; then
+      echo "Error: The amount of agents cannot be zero."
       exit 1
     fi
     for ((i=1; i<=PARAM; i++)); do
