@@ -13,7 +13,7 @@ function Install-RslPrerequisites
         return
     }
 
-    $osInfo = Get-CimInstance -ClassName Win32_OperatingSystem
+    $osInfo = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction Stop
     $isServerOS = $osInfo.ProductType -ne 1
 
     if ($isServerOS)
@@ -150,7 +150,7 @@ function Invoke-RslSetup
     )
 
     $ComputerName = $env:COMPUTERNAME
-    $Domain = (Get-CimInstance Win32_ComputerSystem).Domain
+    $Domain = (Get-CimInstance Win32_ComputerSystem -ErrorAction Stop).Domain
 
     Write-Host "=================================="
     Write-Host "RslConnect Setup Wizard"

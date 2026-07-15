@@ -1,4 +1,4 @@
-function Invoke-CheckUsers {
+function Invoke-RslCheckUsers {
 	param(
 		[Parameter(Mandatory = $true)]
 		[pscustomobject]$Config
@@ -19,4 +19,4 @@ function Invoke-CheckUsers {
 	}
 }
 
-Export-ModuleMember -Function Invoke-CheckUsers
+Export-ModuleMember -Function Invoke-RslCheckUsers

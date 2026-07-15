@@ -1,4 +1,4 @@
-function Invoke-CheckKerberos {
+function Invoke-RslCheckKerberos {
 	param(
 		[Parameter(Mandatory = $true)]
 		[pscustomobject]$Config
@@ -19,4 +19,4 @@ function Invoke-CheckKerberos {
 	}
 }
 
-Export-ModuleMember -Function Invoke-CheckKerberos
+Export-ModuleMember -Function Invoke-RslCheckKerberos

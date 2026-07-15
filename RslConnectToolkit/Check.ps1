@@ -156,7 +156,7 @@ function Invoke-ConfiguredChecks
     foreach ($check in $enabledChecks)
     {
         $checkName = $check.Name
-        $functionName = "Invoke-Check$checkName"
+        $functionName = "Invoke-RslCheck$checkName"
 
         # In single-file mode check functions are already in memory
         $command = Get-Command $functionName -CommandType Function -ErrorAction SilentlyContinue
@@ -344,12 +344,11 @@ function Invoke-RslCheck
         [string]$ScriptPath = $PSCommandPath
     )
 
+    # Clear any previously loaded RslCheck modules and functions to avoid conflicts
     Get-Module RslCheck-* | Remove-Module -Force
+    Get-ChildItem Function:Invoke-RslCheck* | Remove-Item -Force
 
-    Get-ChildItem Function:Invoke-* |
-        Where-Object { $_.Name -like 'Invoke-Check*' -or $_.Name -like 'Invoke-Rsl*' -or $_.Name -eq 'Start-AsSystem' } |
-        Remove-Item -Force
-
+    # Ensure ScriptRoot and ScriptPath are set correctly    
     if ([string]::IsNullOrWhiteSpace($ScriptRoot))
     {
         $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path

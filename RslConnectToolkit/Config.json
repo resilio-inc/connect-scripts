@@ -1,15 +1,18 @@
 {
-    "Checks": { 
+    "Checks": {
         "System" : true,
         "Network": true,
         "AD": true,
         "Kerberos": true,
         "Application": true,
         "Users": true,
-        "SPN": true,
         "Services": true
     },
     "Domain": "rsldev.local",
+    "SPNs": [
+        "rslmc/rsldev.local",
+        "rsl/rsldev.local"
+    ],
     "Ports": [
         53,
         88,
@@ -17,9 +20,6 @@
         445,
         636,
         3268
-    ],
-    "SPNs": [
-        "rslmc/rsldev.local"
     ],
     "Users": [
         "svc_app",

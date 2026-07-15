@@ -1,4 +1,4 @@
-function Invoke-CheckNetwork {
+function Invoke-RslCheckNetwork {
 	param(
 		[Parameter(Mandatory = $true)]
 		[pscustomobject]$Config
@@ -19,4 +19,4 @@ function Invoke-CheckNetwork {
 	}
 }
 
-Export-ModuleMember -Function Invoke-CheckNetwork
+Export-ModuleMember -Function Invoke-RslCheckNetwork

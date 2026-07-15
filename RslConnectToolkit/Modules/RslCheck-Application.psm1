@@ -1,4 +1,4 @@
-function Invoke-CheckApplication {
+function Invoke-RslCheckApplication {
 	param(
 		[Parameter(Mandatory = $true)]
 		[pscustomobject]$Config
@@ -19,4 +19,4 @@ function Invoke-CheckApplication {
 	}
 }
 
-Export-ModuleMember -Function Invoke-CheckApplication
+Export-ModuleMember -Function Invoke-RslCheckApplication
