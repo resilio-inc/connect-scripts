@@ -1,0 +1,29 @@
+{
+    "Checks": {
+        "System" : true,
+        "Network": true,
+        "AD": true,
+        "Kerberos": true,
+        "Application": true,
+        "Users": true,
+        "Services": true
+    },
+    "Domain": "rsldev.local",
+    "SPNs": [
+        "rslmc/rsldev.local",
+        "rsl/rsldev.local"
+    ],
+    "Ports": [
+        53,
+        88,
+        389,
+        445,
+        636,
+        3268
+    ],
+    "Users": [
+        "svc_app",
+        "svc_sql",
+        "gmsa_app$"
+    ]
+}
