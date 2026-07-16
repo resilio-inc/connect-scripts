@@ -77,23 +77,35 @@ What setup does:
 3. Configures constrained delegation (`Set-ADComputer -PrincipalsAllowedToDelegateToAccount`) after confirmation.
 
 ## Build and Bundle
-Build bundled script:
+Build the bundled distribution script from the repository root:
 
 ```powershell
-./Build.ps1
+powershell.exe -ExecutionPolicy Bypass -File .\Build.ps1
 ```
 
 Build parameters:
 
 - `-BuildType Dev|Release` (default: `Dev`)
-- `-Signup` (optional signing step)
+- `-Signup` (enables code signing after build)
+- `-Thumbprint <CertificateThumbprint>` (optional for Dev; required for Release when `-Signup` is used)
+- `-ScriptVersion <VersionString>` (optional; overrides automatic versioning and accepts values with or without a leading `v`)
+
+Version stamping logic for the generated header:
+
+1. If `-ScriptVersion` is provided, that value is used (prefixed with `v` if missing).
+2. Else if `GITHUB_RUN_NUMBER` exists, version becomes `v1.0.<GITHUB_RUN_NUMBER>`.
+3. Else version defaults to `v1.0.0`.
+
+The generated script header also includes a UTC build date.
 
 Examples:
 
 ```powershell
-./Build.ps1
-./Build.ps1 -Signup
-./Build.ps1 -BuildType Release -Signup
+powershell.exe -ExecutionPolicy Bypass -File .\Build.ps1
+powershell.exe -ExecutionPolicy Bypass -File .\Build.ps1 -Signup
+powershell.exe -ExecutionPolicy Bypass -File .\Build.ps1 -ScriptVersion 1.2.7
+powershell.exe -ExecutionPolicy Bypass -File .\Build.ps1 -ScriptVersion v1.2.7
+powershell.exe -ExecutionPolicy Bypass -File .\Build.ps1 -BuildType Release -Signup -Thumbprint 0123456789ABCDEF0123456789ABCDEF01234567
 ```
 
 Build output:
@@ -104,8 +116,9 @@ Build output:
 
 Signing notes:
 
-- `Dev`: creates a self-signed code-signing certificate.
-- `Release`: expects a trusted certificate by thumbprint configured in `Build.ps1`.
+- `Dev`: when `-Signup` is used, a self-signed code-signing certificate is created automatically.
+- `Release`: when `-Signup` is used, a trusted code-signing certificate must exist in `Cert:\CurrentUser\My` and its thumbprint must be passed via `-Thumbprint`.
+- If `-Signup` is not provided, the script builds without signing.
 
 ## Running the Bundled Script
 From `Release` folder:
