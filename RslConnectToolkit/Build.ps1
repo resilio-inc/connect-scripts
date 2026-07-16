@@ -127,10 +127,14 @@ param(
 	[Parameter(Position = 0)]
     [ValidateSet("Check","Setup")]
     [string]`$Action = "Check",
+    # Check params
+    [Parameter()]
+	[string]`$Config = "Config",
+    # Setup params
 	[Parameter()]
-	[string]`$NassuniServer,
+	[string]`$NasuniShare = "",
 	[Parameter()]
-	[string]`$Config = "Config"
+	[string]`$PrimaryAgent = ""
 )
 
 Set-StrictMode -Version Latest
@@ -155,17 +159,23 @@ Write-Host "Adding Check.ps1..."
 Add-FileContent -Path "$ProjectRoot\Check.ps1" -StripTopParamBlock
 
 @"
-
 ###############################################################################
 # Main script entry point
 
 switch (`$Action)
 {
-	"Check" {
+	"Check"
+	{
 		Invoke-RslCheck -Config `$Config
 	}
-	"Setup" {
-		Invoke-RslSetup -NassuniServer `$NassuniServer
+	"Setup" 
+	{
+		if ([string]::IsNullOrWhiteSpace(`$NasuniShare))
+		{
+			`$NasuniShare = Read-Host "Supply values for the parameter 'NasuniShare'"
+		}
+
+		Invoke-RslSetup -NasuniShare `$NasuniShare -PrimaryAgent `$PrimaryAgent
 	}
 }
 "@ | Add-Content $OutputFile

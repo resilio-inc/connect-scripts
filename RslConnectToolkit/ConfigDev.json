@@ -1,6 +1,6 @@
 {
     "Checks": {
-        "System" : false,
+        "System" : true,
         "Network": false,
         "AD": true,
         "Kerberos": false,
