@@ -92,7 +92,7 @@ function Enable-RslDelegation
         [string]$PrimaryAgent
     )
 
-    Check-ActiveDirectoryConnectivity
+    Test-ActiveDirectoryConnectivity
 
     $PrimaryAgentAccount = Get-ADComputer -Identity $PrimaryAgent -ErrorAction Stop
     $GetPrimaryAgentCommand = "Get-ADComputer -Identity `"$PrimaryAgent`" -ErrorAction Stop"
@@ -149,7 +149,7 @@ function Read-RslYesNo
     }
 }
 
-function Check-ActiveDirectoryConnectivity
+function Test-ActiveDirectoryConnectivity
 {
     try
     {
