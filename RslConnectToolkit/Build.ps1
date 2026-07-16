@@ -5,7 +5,8 @@ param(
     [ValidateSet("Dev","Release")]
     $BuildType="Dev",
 	[switch]$Signup,
-	[string]$Thumbprint = ""
+	[string]$Thumbprint = "",
+	[string]$ScriptVersion = ""
 
 )
 
@@ -128,9 +129,33 @@ function Set-ScriptSignature
 	Write-Host ""
 }
 
+# Header params
+$BuildDate = Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC'
+$VersionPrefix = "v1.0"
+$ResolvedVersion = if (-not [string]::IsNullOrWhiteSpace($ScriptVersion))
+{
+    $Version = $ScriptVersion.Trim()
+    if ($Version -notmatch '^(?i)v')
+    {
+        $Version = "v$Version"
+    }
+
+    $Version
+}
+elseif (-not [string]::IsNullOrWhiteSpace($env:GITHUB_RUN_NUMBER))
+{
+    "$VersionPrefix.$($env:GITHUB_RUN_NUMBER)"
+}
+else
+{
+    "$VersionPrefix.0"
+}
+
 @"
 ###############################################################################
-# RslConnectToolkit, v1.0.0
+# RslConnectToolkit,
+# Version: v$ResolvedVersion
+# Build date: $BuildDate
 # AUTO-GENERATED FILE
 # DO NOT EDIT
 ###############################################################################
