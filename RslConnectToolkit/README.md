@@ -4,7 +4,7 @@
 RslConnectToolkit provides two operational flows:
 
 1. `Check` flow: run environment checks and generate a text report.
-2. `Setup` flow: guide SPN/delegation setup for a target Nassuni server.
+2. `Setup` flow: guide SPN/delegation setup for a target Nasuni share.
 
 Primary source scripts:
 
@@ -61,11 +61,15 @@ powershell.exe -ExecutionPolicy Bypass -File .\Check.ps1 -Verbose
 ```
 
 ## Running Setup (Source Script)
-`Setup.ps1` requires `-NassuniServer`.
+`Setup.ps1` requires `-NasuniShare`.
 
 ```powershell
-powershell.exe -ExecutionPolicy Bypass -File .\Setup.ps1 -NassuniServer NAS-01
+powershell.exe -ExecutionPolicy Bypass -File .\Setup.ps1 -NasuniShare NAS-01
 ```
+
+Optional setup parameter:
+
+- `-PrimaryAgent <ComputerName>` (default: local computer name)
 
 What setup does:
 1. Shows SPNs to add and optionally applies them with `setspn -S`.
@@ -108,14 +112,16 @@ From `Release` folder:
 
 ```powershell
 powershell.exe -ExecutionPolicy Bypass -File .\RslConnectToolkit.ps1 -Action Check -Config Config
-powershell.exe -ExecutionPolicy Bypass -File .\RslConnectToolkit.ps1 -Action Setup -NassuniServer NAS-01
+powershell.exe -ExecutionPolicy Bypass -File .\RslConnectToolkit.ps1 -Action Setup -NasuniShare NAS-01
+powershell.exe -ExecutionPolicy Bypass -File .\RslConnectToolkit.ps1 -Action Setup -NasuniShare NAS-01 -PrimaryAgent primary-agent
 ```
 
 Bundled script parameters:
 
 - `-Action Check|Setup` (default: `Check`)
 - `-Config <NameWithoutJsonExtension>` (default: `Config`)
-- `-NassuniServer <ServerName>` (required for `Setup`)
+- `-NasuniShare <ShareName>` (required for `Setup`)
+- `-PrimaryAgent <ComputerName>` (optional for `Setup`, default: local computer name)
 
 ## Configuration
 `Check.ps1` expects config name without `.json` extension and resolves it as `<ScriptRoot>/<ConfigName>.json`.
