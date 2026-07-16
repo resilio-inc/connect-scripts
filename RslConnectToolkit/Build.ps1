@@ -2,9 +2,11 @@
 # Builds a single distributable PowerShell script.
 
 param(
-	[switch]$Signup,
     [ValidateSet("Dev","Release")]
-    $BuildType="Dev"
+    $BuildType="Dev",
+	[switch]$Signup,
+	[string]$Thumbprint = ""
+
 )
 
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -20,8 +22,10 @@ if (Test-Path $OutputFile)
 function Get-RelativePathCompat
 {
 	param(
-		[Parameter(Mandatory = $true)][string]$BasePath,
-		[Parameter(Mandatory = $true)][string]$TargetPath
+		[Parameter(Mandatory = $true)]
+		[string]$BasePath,
+		[Parameter(Mandatory = $true)]
+		[string]$TargetPath
 	)
 
 	$baseResolved = [IO.Path]::GetFullPath($BasePath)
@@ -42,7 +46,8 @@ function Get-RelativePathCompat
 function Add-FileContent
 {
     param(
-        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)]
+		[string]$Path,
         [switch]$StripTopParamBlock
     )
 
@@ -73,14 +78,21 @@ function Add-FileContent
 function Set-ScriptSignature
 {
 	param(
-		[Parameter(Mandatory = $true)][string]$Path
+		[Parameter(Mandatory = $true)]
+		[string]$Path,
+		[Parameter()]
+		[string]$Thumbprint
 	)
 
-	$thumbprint = "123456789ABCDEF123456789ABCDEF123456789A" # Replace with your actual thumbprint
 	if ($BuildType -eq "Release")
 	{
-		Write-Host "Searching for Code Signing certificate with thumbprint $thumbprint..."
-		$cert = Get-ChildItem Cert:\CurrentUser\My\$thumbprint -CodeSigningCert
+		if ([string]::IsNullOrWhiteSpace($Thumbprint))
+        {
+            throw "Code Signing certificate thumbprint is required for Release build."
+        }
+
+		Write-Host "Searching for Code Signing certificate with thumbprint $Thumbprint..."
+		$cert = Get-ChildItem Cert:\CurrentUser\My\$Thumbprint -CodeSigningCert
 	}
 	else
 	{
@@ -189,5 +201,5 @@ Write-Host ""
 
 if ($Signup)
 {
-	Set-ScriptSignature "$OutputFile"
+	Set-ScriptSignature -Path "$OutputFile" -Thumbprint $Thumbprint
 }
