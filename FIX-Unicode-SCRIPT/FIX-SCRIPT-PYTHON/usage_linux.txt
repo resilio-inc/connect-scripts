@@ -1,0 +1,106 @@
+Resilio Connect — Unicode Filename Fixer
+Linux Usage
+========================================
+
+REQUIREMENTS
+------------
+- Python 3.10+
+- Access to Resilio Connect Management Console API
+- Script must run on the SAME machine where the Resilio agent is installed
+  (the agent that has the invalid filenames)
+
+FILES
+-----
+  resilio_fix_unicode.py    — orchestrator (queries MC API)
+  fix_non_utf8_names.py     — engine (renames files and directories)
+
+Both files must be in the same directory.
+
+
+QUICK START
+-----------
+
+1. Dry-run (always start here — no files are changed):
+
+   python3 resilio_fix_unicode.py \
+     --mc-url https://<MC_HOST>:8446 \
+     --token <YOUR_API_TOKEN>
+
+2. Review the log file that was created automatically:
+
+   cat resilio_fix_unicode_YYYYMMDD_HHMMSS.log
+
+3. If proposed renames look correct — apply:
+
+   python3 resilio_fix_unicode.py \
+     --mc-url https://<MC_HOST>:8446 \
+     --token <YOUR_API_TOKEN> \
+     --apply
+
+4. Restart the Resilio agent:
+
+   sudo systemctl restart resilio-sync
+
+5. Check Management Console — error should be gone.
+
+
+ALL OPTIONS
+-----------
+
+  --mc-url    URL of Management Console, e.g. https://192.168.1.1:8446
+  --token     API token (MC -> Settings -> API -> Generate Token)
+  --apply     Actually rename files (default: dry-run only)
+  --log       Custom path for the log file
+              Default: resilio_fix_unicode_YYYYMMDD_HHMMSS.log
+              next to the script
+  --encodings Comma-separated list of encodings to try
+              Default: cp1251,cp866,koi8-r,mac_cyrillic,cp1252,...
+
+
+EXAMPLES
+--------
+
+# Dry-run, auto log
+python3 resilio_fix_unicode.py \
+  --mc-url https://192.168.128.103:8446 \
+  --token AXTDYOU5YIEL24U4HGAZVFICHHRNOPIZ3YB3O2FVVODVB2GK4KPA
+
+# Apply, auto log
+python3 resilio_fix_unicode.py \
+  --mc-url https://192.168.128.103:8446 \
+  --token AXTDYOU5YIEL24U4HGAZVFICHHRNOPIZ3YB3O2FVVODVB2GK4KPA \
+  --apply
+
+# Apply, custom log path
+python3 resilio_fix_unicode.py \
+  --mc-url https://192.168.128.103:8446 \
+  --token AXTDYOU5YIEL24U4HGAZVFICHHRNOPIZ3YB3O2FVVODVB2GK4KPA \
+  --apply \
+  --log /home/maxim/fixes.log
+
+# Run engine directly on a specific folder (no MC API needed)
+python3 fix_non_utf8_names.py /mnt/hybrid/ProjectFolder --apply
+
+
+LOG FILE FORMAT
+---------------
+
+2026-06-23 12:48:03  INFO     [guessed:cp1251]
+2026-06-23 12:48:03  INFO       from: 'SPS-2.T1_WFT ������_rush.xlsx'
+2026-06-23 12:48:03  INFO       to:   'SPS-2.T1_WFT Привет_rush.xlsx'
+2026-06-23 12:48:03  INFO       result: renamed OK
+
+Rename methods:
+  guessed:<enc>  — encoding detected, name converted to UTF-8
+  surrogate      — Windows unpaired surrogate stripped (replaced with _)
+  fallback       — encoding unknown, invalid bytes replaced with _
+
+
+NOTES
+-----
+- The script queries ALL active job runs in MC and fixes errors on ALL of them.
+- Directories with invalid names are fixed as well as files.
+- Clean files (already valid UTF-8) are never touched.
+- If two files would get the same name after renaming, _1, _2, ...
+  is appended automatically.
+- The log file is always written — even in dry-run mode.

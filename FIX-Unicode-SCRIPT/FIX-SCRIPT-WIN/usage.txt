@@ -1,0 +1,20 @@
+Структура папки на Windows Server:
+
+C:\SHARE_TEST\
+    fix_non_utf8_names.py              ← движок (Python)
+    resilio_fix_unicode_wrapper.ps1    ← фантик от конфетки (PS)
+	
+	
+	
+Запуск:
+
+# Dry-run
+.\resilio_fix_unicode_wrapper.ps1 `
+  -McUrl https://192.168.128.103:8446 `
+  -Token AXTDYOU5YIEL24U4HGAZVFICHHRNOPIZ3YB3O2FVVODVB2GK4KPA
+
+# Apply
+.\resilio_fix_unicode_wrapper.ps1 `
+  -McUrl https://192.168.128.103:8446 `
+  -Token AXTDYOU5YIEL24U4HGAZVFICHHRNOPIZ3YB3O2FVVODVB2GK4KPA `
+  -Apply
