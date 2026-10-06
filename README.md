@@ -31,3 +31,6 @@ Given a name of an Agent (can be masked with wildcards) it checks the Agent stat
 ## deploy_agent_mac.sh
 This script allows to register agent of Mac as a LaunchDaemon and run under limited user accout. 
 
+## Datadog Integration
+This folder contains a custom DataDog Agent check that allows to integrate Resilio Management Console with a DataDog Agent.
+
