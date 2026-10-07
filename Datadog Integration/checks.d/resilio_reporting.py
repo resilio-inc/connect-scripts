@@ -12,6 +12,8 @@ TAG_COLUMNS = ('AgentId', 'AgentPeerId', 'JobId', 'JobRunId')
 
 _CAMEL_RE = re.compile(r'(?<!^)(?=[A-Z])')
 
+OAUTH_TOKEN_REFRESH_MARGIN_SECONDS = 60
+
 
 def _snake_case(name):
     return _CAMEL_RE.sub('_', name).lower()
@@ -21,6 +23,9 @@ class ResilioReportingCheck(AgentCheck):
     def check(self, instance):
         base_url = instance.get('base_url')
         api_token = instance.get('api_token')
+        oauth_token_url = instance.get('oauth_token_url')
+        client_id = instance.get('client_id')
+        client_secret = instance.get('client_secret')
         views = instance.get('views', DEFAULT_VIEWS)
         query_limit = instance.get('query_limit', 5000)
         tls_verify = instance.get('tls_verify', True)
@@ -28,12 +33,24 @@ class ResilioReportingCheck(AgentCheck):
         verify = ca_cert if ca_cert else tls_verify
         extra_tags = instance.get('tags', [])
 
-        if not base_url or not api_token:
+        if not base_url:
             self.service_check('resilio_reporting.can_connect', AgentCheck.CRITICAL,
-                                message='base_url and api_token are required', tags=extra_tags)
+                                message='base_url is required', tags=extra_tags)
             return
 
-        headers = {'Authorization': f'Token {api_token}'}
+        if oauth_token_url and client_id and client_secret:
+            access_token = self._get_oauth_token(
+                oauth_token_url, client_id, client_secret, instance.get('scope'), verify, extra_tags)
+            if access_token is None:
+                return
+            headers = {'Authorization': f'Bearer {access_token}'}
+        elif api_token:
+            headers = {'Authorization': f'Token {api_token}'}
+        else:
+            self.service_check('resilio_reporting.can_connect', AgentCheck.CRITICAL,
+                                message='api_token or oauth_token_url/client_id/client_secret are required',
+                                tags=extra_tags)
+            return
 
         for view in views:
             cursor_key = f'cursor_{view}'
@@ -46,6 +63,43 @@ class ResilioReportingCheck(AgentCheck):
 
             if last_processed_seq is not None:
                 self._write_cursor(cursor_key, last_processed_seq)
+
+    def _get_oauth_token(self, token_url, client_id, client_secret, scope, verify, extra_tags):
+        cached_raw = self.read_persistent_cache('oauth_token_cache')
+        if cached_raw:
+            try:
+                cached = json.loads(cached_raw)
+                if cached.get('expires_at', 0) > time.time() + OAUTH_TOKEN_REFRESH_MARGIN_SECONDS:
+                    return cached['access_token']
+            except (ValueError, KeyError):
+                pass
+
+        body = {'grant_type': 'client_credentials', 'client_id': client_id, 'client_secret': client_secret}
+        if scope:
+            body['scope'] = scope
+
+        try:
+            resp = requests.post(token_url, data=body, verify=verify, timeout=30)
+            resp.raise_for_status()
+        except requests.RequestException as e:
+            self.service_check('resilio_reporting.can_connect', AgentCheck.CRITICAL,
+                                message=f'oauth token request failed: {e}', tags=extra_tags)
+            return None
+
+        payload = resp.json()
+        access_token = payload.get('access_token')
+
+        if not access_token:
+            self.service_check('resilio_reporting.can_connect', AgentCheck.CRITICAL,
+                                message='oauth token response missing access_token', tags=extra_tags)
+            return None
+
+        self.write_persistent_cache('oauth_token_cache', json.dumps({
+            'access_token': access_token,
+            'expires_at': time.time() + payload.get('expires_in', 3600),
+        }))
+
+        return access_token
 
     def _read_cursor(self, key):
         raw = self.read_persistent_cache(key)
