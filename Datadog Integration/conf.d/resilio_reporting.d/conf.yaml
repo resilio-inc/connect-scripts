@@ -1,0 +1,24 @@
+init_config:
+
+instances:
+  - base_url: https://<YOUR_RESILIO_SERVER_HOST>:8446
+    api_token: "<YOUR_API_TOKEN>"
+    oauth_token_url: ""
+    client_id: ""
+    client_secret: ""
+    scope: ""
+    views:
+      - audit_logs_view
+      - events_logs_view
+      - file_events_view
+    query_limit: 10000
+    tls_verify: true
+    tags:
+      - env:dev
+      - service:resilio-reporting
+    min_collection_interval: 60
+
+logs:
+  - type: integration
+    source: resilio_reporting
+    service: resilio-reporting
