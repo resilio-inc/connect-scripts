@@ -1,0 +1,18 @@
+[resilio_reporting://api_token]
+base_url = https://<YOUR_RESILIO_SERVER_HOST>:8446
+api_token = <YOUR_API_TOKEN>
+views = audit_logs_view,events_logs_view,file_events_view
+query_limit = 10000
+tls_verify = true
+interval = 60
+
+[resilio_reporting://oauth]
+base_url = https://<YOUR_RESILIO_SERVER_HOST>:8446
+oauth_token_url = https://<YOUR_IDP_HOST>/oauth2/token
+client_id = <YOUR_CLIENT_ID>
+client_secret = <YOUR_CLIENT_SECRET>
+scope = <YOUR_SCOPE>
+views = audit_logs_view,events_logs_view,file_events_view
+query_limit = 10000
+tls_verify = true
+interval = 60
